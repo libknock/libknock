@@ -154,7 +154,7 @@ The frame carries authenticated metadata such as client identity hash, method, t
 | `udp-passive` | UDP knock read through packet capture on the server side. | Packet capture privileges on the server platform. |
 | `udp-passive-seq` | Multi-part UDP sequence read through packet capture on the server side. | Packet capture privileges on the server platform. |
 
-Use the table order above when presenting method choices in configuration UIs.
+For most deployments, start with UDP knock before considering passive or raw-packet methods.
 
 ## Capability status
 
