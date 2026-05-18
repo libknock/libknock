@@ -2,6 +2,7 @@
 
 [![License: BSL-1.1](https://img.shields.io/badge/license-BSL--1.1-blue.svg)](LICENSE)
 [![Future License: Apache-2.0](https://img.shields.io/badge/future%20license-Apache--2.0-lightgrey.svg)](LICENSE)
+[![Go Reference](https://pkg.go.dev/badge/github.com/libknock/libknock.svg)](https://pkg.go.dev/github.com/libknock/libknock)
 
 Source-available under BSL-1.1. Production use is allowed, but offering libknock or derivative works as a hosted or managed service is restricted before it converts to Apache-2.0 on 2030-05-15.
 
