@@ -1,6 +1,11 @@
 # libknock
 
-`libknock` is an embeddable TCP pre-application authentication SDK for Go applications.
+[![License: BSL-1.1](https://img.shields.io/badge/license-BSL--1.1-blue.svg)](LICENSE)
+[![Future License: Apache-2.0](https://img.shields.io/badge/future%20license-Apache--2.0-lightgrey.svg)](LICENSE)
+
+Source-available under BSL-1.1. Production use is allowed, but offering libknock or derivative works as a hosted or managed service is restricted before it converts to Apache-2.0 on 2030-05-15.
+
+Embeddable TCP pre-application authentication SDK for Go applications.
 
 It authenticates a compact binary frame after a TCP connection is established and before the application protocol starts. After authentication succeeds, the caller receives a normal `net.Conn` and continues with its own protocol stack: plain TCP, TLS, HTTP, gRPC, custom RPC, agent connections, game protocols, database-like protocols, or any protocol built on top of `net.Conn`.
 
