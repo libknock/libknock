@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"sync"
 	"time"
 
 	"github.com/libknock/libknock/internal/cache"
@@ -11,6 +12,7 @@ const DefaultBanListMaxEntries = 65536
 // BanList is a TTL set for policy decisions. It reuses the internal cache primitive, while limiter counters remain separate because windowed counting and bans have different semantics.
 type BanList struct {
 	clock     Clock
+	mu        sync.Mutex
 	entries   *cache.TTLLRU[string, struct{}]
 	lastSweep time.Time
 }
@@ -41,7 +43,9 @@ func (b *BanList) BanUntil(key string, until time.Time) {
 		return
 	}
 	now := b.clock.Now()
-	b.sweepPeriodically(now)
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.sweepPeriodicallyLocked(now)
 	b.entries.SetUntil(key, struct{}{}, until)
 }
 
@@ -56,6 +60,8 @@ func (b *BanList) IsBannedAt(key string, now time.Time) bool {
 	if b == nil || key == "" {
 		return false
 	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	_, ok := b.entries.GetAt(key, now)
 	return ok
 }
@@ -64,6 +70,8 @@ func (b *BanList) Unban(key string) {
 	if b == nil {
 		return
 	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	b.entries.Delete(key)
 }
 
@@ -71,6 +79,8 @@ func (b *BanList) Sweep(now time.Time) int {
 	if b == nil {
 		return 0
 	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	return b.entries.Sweep(now)
 }
 
@@ -78,10 +88,12 @@ func (b *BanList) Len() int {
 	if b == nil {
 		return 0
 	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	return b.entries.Len()
 }
 
-func (b *BanList) sweepPeriodically(now time.Time) {
+func (b *BanList) sweepPeriodicallyLocked(now time.Time) {
 	if b.lastSweep.IsZero() {
 		b.lastSweep = now
 		return

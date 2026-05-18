@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/binary"
 	"io"
 	"log"
@@ -11,11 +10,11 @@ import (
 	"time"
 
 	"github.com/libknock/libknock"
-	"github.com/libknock/libknock/auth"
+	"github.com/libknock/libknock/examples/internal/exampleutil"
 )
 
 func main() {
-	secret := mustSecret()
+	secret := exampleutil.MustSecret()
 	addr := env("LIBKNOCK_ADDR", "127.0.0.1:9001")
 	d := libknock.Dialer{Base: &net.Dialer{Timeout: 5 * time.Second}, Config: libknock.ClientConfig{ClientID: "client-001", Secret: secret, ServerPort: 9001}}
 	conn, err := d.DialContext(context.Background(), "tcp", addr)
@@ -38,13 +37,6 @@ func main() {
 	log.Printf("response: %s", resp)
 }
 
-func mustSecret() []byte {
-	secret, err := base64.StdEncoding.DecodeString(os.Getenv("LIBKNOCK_SECRET_BASE64"))
-	if err != nil || len(secret) < auth.MinSecretSize {
-		log.Fatal("set LIBKNOCK_SECRET_BASE64 to at least 16 random bytes")
-	}
-	return secret
-}
 func env(k, d string) string {
 	if v := os.Getenv(k); v != "" {
 		return v

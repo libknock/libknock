@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net"
+	"sort"
 	"time"
 
 	"github.com/libknock/libknock/protocol"
@@ -160,8 +161,14 @@ func NewStaticSecretResolver(secrets map[string][]byte) StaticSecrets {
 }
 
 func (s StaticSecrets) ResolveCandidates(meta FrameMeta) ([]SecretCandidate, error) {
+	ids := make([]string, 0, len(s))
+	for id := range s {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
 	out := make([]SecretCandidate, 0, len(s))
-	for id, secret := range s {
+	for _, id := range ids {
+		secret := s[id]
 		if len(secret) == 0 {
 			continue
 		}
@@ -196,9 +203,14 @@ func NewRotatingSecretResolver(secrets map[string][][]byte) RotatingSecrets {
 }
 
 func (s RotatingSecrets) ResolveCandidates(meta FrameMeta) ([]SecretCandidate, error) {
+	ids := make([]string, 0, len(s))
+	for id := range s {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
 	var out []SecretCandidate
-	for id, versions := range s {
-		for _, secret := range versions {
+	for _, id := range ids {
+		for _, secret := range s[id] {
 			if len(secret) == 0 {
 				continue
 			}

@@ -3,21 +3,20 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"encoding/base64"
 	"log"
 	"net"
 	"os"
 	"time"
 
 	libknock "github.com/libknock/libknock"
-	"github.com/libknock/libknock/auth"
+	"github.com/libknock/libknock/test/integration/grpc/examples/internal/exampleutil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func main() {
-	secret := mustSecret()
+	secret := exampleutil.MustSecret()
 	addr := env("LIBKNOCK_ADDR", "127.0.0.1:9004")
 	d := libknock.Dialer{Base: &net.Dialer{Timeout: 5 * time.Second}, Config: libknock.ClientConfig{ClientID: "client-001", Secret: secret, ServerPort: 9004}}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -34,13 +33,6 @@ func main() {
 	log.Print("grpc ping ok")
 }
 
-func mustSecret() []byte {
-	secret, err := base64.StdEncoding.DecodeString(os.Getenv("LIBKNOCK_SECRET_BASE64"))
-	if err != nil || len(secret) < auth.MinSecretSize {
-		log.Fatal("set LIBKNOCK_SECRET_BASE64 to at least 16 random bytes")
-	}
-	return secret
-}
 func env(k, d string) string {
 	if v := os.Getenv(k); v != "" {
 		return v

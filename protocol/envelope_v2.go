@@ -75,14 +75,21 @@ func (c EnvelopeV2Config) Validate(maxFrameSize int) error {
 	if maxFrameSize <= 0 {
 		maxFrameSize = EnvelopeV2DefaultMaxSize
 	}
-	buckets := EnvelopeV2Buckets(c.FrameSizeBuckets)
-	if len(buckets) == 0 {
+	if len(c.FrameSizeBuckets) == 0 {
 		return ErrFrameTooLarge
 	}
-	for _, bucket := range buckets {
-		if bucket > maxFrameSize || !EnvelopeV2SupportedBucket(bucket) {
+	seenValid := false
+	for _, bucket := range c.FrameSizeBuckets {
+		if !EnvelopeV2SupportedBucket(bucket) {
+			return ErrInvalidFrameSizeBucket
+		}
+		if bucket > maxFrameSize {
 			return ErrFrameTooLarge
 		}
+		seenValid = true
+	}
+	if !seenValid {
+		return ErrFrameTooLarge
 	}
 	return nil
 }

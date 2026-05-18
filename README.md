@@ -207,6 +207,8 @@ Use relay when the protected upstream is a separate TCP service rather than an a
 - [Getting started](docs/getting-started.md)
 - [Use cases](docs/use-cases.md)
 - [API reference](docs/api.md)
+- [API surface and compatibility](docs/api-surface.md)
+- [Compatibility policy](COMPATIBILITY.md)
 - [Protocols](docs/protocols.md)
 - [Gate and relay](docs/gate-and-relay.md)
 - [Knock methods](docs/knock-methods.md)

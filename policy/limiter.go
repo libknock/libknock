@@ -8,6 +8,9 @@ import (
 
 const DefaultLimiterMaxEntries = 65536
 
+// Limiter keeps per-key rolling-window counters. It intentionally does not use
+// internal/cache.TTLLRU: rate limiting needs mutable counters, LRU eviction, and
+// window resets rather than a simple TTL set.
 type Limiter struct {
 	mu         sync.Mutex
 	window     Window

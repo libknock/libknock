@@ -15,6 +15,9 @@ func ClientAuth(ctx context.Context, conn net.Conn, cfg ClientConfig) error {
 }
 
 func ClientAuthWithInfo(ctx context.Context, conn net.Conn, cfg ClientConfig) (*PeerInfo, error) {
+	if conn == nil {
+		return nil, ErrNilConn
+	}
 	cfg = cfg.WithDefaults()
 	if err := cfg.Validate(); err != nil {
 		_ = conn.Close()

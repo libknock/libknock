@@ -7,6 +7,8 @@ This directory contains detailed documentation for embedding, operating, testing
 - [Getting started](getting-started.md): first server/client integration, config mapping, and TLS/HTTP/gRPC composition.
 - [Use cases](use-cases.md): typical integration scenarios for management endpoints, agents, RPC, custom TCP services, and relay gateways.
 - [API reference](api.md): public types, functions, config structs, and extension interfaces.
+- [API surface](api-surface.md): stable root/auth APIs versus advanced wire/platform packages.
+- [Compatibility policy](../COMPATIBILITY.md): release-candidate compatibility boundaries.
 - [Protocols](protocols.md): TCP auth protocol v1, TCP auth protocol v2, UDP knock frame, sessions, and server proof.
 - [Gate and relay](gate-and-relay.md): listener gate modes and relay gateway composition.
 - [Knock methods](knock-methods.md): supported knock methods, platform notes, and method selection.

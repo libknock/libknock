@@ -9,11 +9,23 @@ import (
 	"github.com/libknock/libknock/netx"
 )
 
+const MinSecretSize = auth.MinSecretSize
+
 type ServerConfig = auth.ServerConfig
 type ClientConfig = auth.ClientConfig
 type PeerInfo = auth.PeerInfo
 type Server = auth.Server
 type Dialer = netx.Dialer
+type SecretResolver = auth.SecretResolver
+type SecretCandidate = auth.SecretCandidate
+type ReplayCache = auth.ReplayCache
+type KnockSender = auth.KnockSender
+type SessionBoundKnockSender = auth.SessionBoundKnockSender
+type KnockSessionStore = auth.KnockSessionStore
+type EventSink = auth.EventSink
+type Policy = auth.Policy
+type FrameMeta = auth.FrameMeta
+type PeerIdentity = auth.PeerIdentity
 
 func NewStaticSecretResolver(secrets map[string][]byte) auth.StaticSecrets {
 	return auth.NewStaticSecretResolver(secrets)

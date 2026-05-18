@@ -94,8 +94,14 @@ func TestEnvelopeV2RejectsPayloadLengthMismatch(t *testing.T) {
 
 func TestEnvelopeV2RejectsUnsupportedBuckets(t *testing.T) {
 	secret := []byte("0123456789abcdef0123456789abcdef")
-	if _, _, err := BuildEnvelopeV2("client", secret, 443, time.Now(), 0, "udp", nil, nil, EnvelopeV2Config{FrameSizeBuckets: []int{1024}}); !errors.Is(err, ErrFrameTooLarge) {
-		t.Fatalf("BuildEnvelopeV2 err = %v, want frame too large", err)
+	if _, _, err := BuildEnvelopeV2("client", secret, 443, time.Now(), 0, "udp", nil, nil, EnvelopeV2Config{FrameSizeBuckets: []int{1024}}); !errors.Is(err, ErrInvalidFrameSizeBucket) {
+		t.Fatalf("BuildEnvelopeV2 err = %v, want invalid frame size bucket", err)
+	}
+	if err := (EnvelopeV2Config{FrameSizeBuckets: []int{128, 999}}).Validate(512); !errors.Is(err, ErrInvalidFrameSizeBucket) {
+		t.Fatalf("Validate err = %v, want invalid frame size bucket", err)
+	}
+	if err := (EnvelopeV2Config{FrameSizeBuckets: []int{1024}}).Validate(512); !errors.Is(err, ErrInvalidFrameSizeBucket) {
+		t.Fatalf("Validate unsupported err = %v, want invalid frame size bucket", err)
 	}
 	if buckets := EnvelopeV2Buckets([]int{127, 128, 160, 192, 1024}); len(buckets) != 2 || buckets[0] != 128 || buckets[1] != 192 {
 		t.Fatalf("buckets = %v, want [128 192]", buckets)

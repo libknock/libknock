@@ -39,3 +39,33 @@ func TestNewStaticSecretResolverCopiesInput(t *testing.T) {
 		t.Fatal("resolver retained caller-owned secret slice")
 	}
 }
+
+func TestStaticSecretsResolveCandidatesDeterministic(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	candidates, err := (StaticSecrets{"b": secret, "a": secret, "c": secret}).ResolveCandidates(FrameMeta{Protocol: AuthProtocolEnvelopeV2, HintMode: HintModeNone})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := []string{candidates[0].ClientID, candidates[1].ClientID, candidates[2].ClientID}
+	want := []string{"a", "b", "c"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("candidate order = %v, want %v", got, want)
+		}
+	}
+}
+
+func TestRotatingSecretsResolveCandidatesDeterministic(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	candidates, err := (RotatingSecrets{"b": {secret}, "a": {secret}}).ResolveCandidates(FrameMeta{Protocol: AuthProtocolEnvelopeV2, HintMode: HintModeNone})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := []string{candidates[0].ClientID, candidates[1].ClientID}
+	want := []string{"a", "b"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("candidate order = %v, want %v", got, want)
+		}
+	}
+}

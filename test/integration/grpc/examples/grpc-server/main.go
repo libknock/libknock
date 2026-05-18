@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/base64"
 	"encoding/pem"
 	"log"
 	"math/big"
@@ -16,7 +15,7 @@ import (
 	"time"
 
 	libknock "github.com/libknock/libknock"
-	"github.com/libknock/libknock/auth"
+	"github.com/libknock/libknock/test/integration/grpc/examples/internal/exampleutil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -32,7 +31,7 @@ func (pinger) Ping(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 }
 
 func main() {
-	secret := mustSecret()
+	secret := exampleutil.MustSecret()
 	raw, err := net.Listen("tcp", env("LIBKNOCK_ADDR", ":9004"))
 	if err != nil {
 		log.Fatal(err)
@@ -41,7 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ln := libknock.WrapListener(raw, libknock.ServerConfig{ServerPort: mustPort(raw.Addr()), Secrets: auth.StaticSecrets{"client-001": secret}})
+	ln := libknock.WrapListener(raw, libknock.ServerConfig{ServerPort: exampleutil.MustPort(raw.Addr()), Secrets: libknock.NewStaticSecretResolver(map[string][]byte{"client-001": secret})})
 	server := grpc.NewServer(grpc.Creds(credentials.NewTLS(&tls.Config{Certificates: []tls.Certificate{cert}})))
 	registerPinger(server)
 	log.Printf("grpc server listening on %s", raw.Addr())
@@ -83,22 +82,10 @@ func selfSignedCert() (tls.Certificate, error) {
 	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
 	return tls.X509KeyPair(certPEM, keyPEM)
 }
-func mustSecret() []byte {
-	secret, err := base64.StdEncoding.DecodeString(os.Getenv("LIBKNOCK_SECRET_BASE64"))
-	if err != nil || len(secret) < auth.MinSecretSize {
-		log.Fatal("set LIBKNOCK_SECRET_BASE64 to at least 16 random bytes")
-	}
-	return secret
-}
+
 func env(k, d string) string {
 	if v := os.Getenv(k); v != "" {
 		return v
 	}
 	return d
-}
-func mustPort(addr net.Addr) int {
-	if tcp, ok := addr.(*net.TCPAddr); ok {
-		return tcp.Port
-	}
-	return 0
 }

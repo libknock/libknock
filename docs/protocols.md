@@ -86,7 +86,7 @@ AAD without route hints:
 prefix_random || bucket_size || server_port || "tcp-auth-envelope-v2"
 ```
 
-The server selects candidate secrets with the route hint when enabled, opens the envelope with AEAD, validates timestamp and replay state, then returns a clean `net.Conn` to the caller. Route hints are the default and recommended mode. `HintModeNone` forces the resolver to return broader candidate sets and is intended only for small client populations or custom resolvers that impose their own limits. `ServerConfig.MaxAuthAttempts` caps envelope v2 AEAD open attempts per connection.
+The server selects candidate secrets with the route hint when enabled, opens the envelope with AEAD, validates timestamp and replay state, then returns a clean `net.Conn` to the caller. Route hints are the default and recommended mode. `HintModeNone` forces the resolver to return broader candidate sets and is intended only for small client populations or custom resolvers that impose deterministic limits. Built-in map-backed resolvers sort candidates by `client_id`; if a no-hint candidate set exceeds `ServerConfig.MaxAuthAttempts`, the server returns `auth.ErrTooManyCandidates` rather than failing nondeterministically.
 
 AAD rationale:
 

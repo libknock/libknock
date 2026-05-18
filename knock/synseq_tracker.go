@@ -70,12 +70,6 @@ func (t *synSeqTracker) add(src net.IP, dstPort int, fields SYNFields, clients [
 	return false, ""
 }
 
-func (t *synSeqTracker) prune(now time.Time) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.pruneLocked(now)
-}
-
 func (t *synSeqTracker) pruneLocked(now time.Time) {
 	for key, st := range t.states {
 		if now.Sub(st.firstSeen) > t.opts.Window {

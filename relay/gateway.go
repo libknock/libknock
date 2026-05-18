@@ -71,7 +71,7 @@ func (g *Gateway) run(ctx context.Context) error {
 	runCtx, cancel := context.WithCancel(ctx)
 	timers := timerset.New()
 	defer timers.StopAll()
-	defer func() { _ = gatewaycore.CleanupFirewall(context.Background(), fw) }()
+	defer func() { _ = gatewaycore.CleanupFirewallDetached(fw) }()
 	var childErr firstChildError
 	var wg sync.WaitGroup
 	if g.KnockMethod != "" {

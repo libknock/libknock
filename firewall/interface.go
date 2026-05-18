@@ -338,10 +338,6 @@ func run(ctx context.Context, name string, args ...string) error {
 	return runWithConfig(ctx, Config{}, name, args...)
 }
 
-func runInput(ctx context.Context, input, name string, args ...string) error {
-	return runInputWithConfig(ctx, Config{}, input, name, args...)
-}
-
 func runWithConfig(ctx context.Context, cfg Config, name string, args ...string) error {
 	runner := cfg.Runner
 	if runner == nil {

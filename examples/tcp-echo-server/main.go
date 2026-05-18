@@ -8,7 +8,6 @@ import (
 	"net"
 
 	"github.com/libknock/libknock"
-	"github.com/libknock/libknock/auth"
 	"github.com/libknock/libknock/examples/internal/exampleutil"
 )
 
@@ -18,7 +17,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ln = libknock.WrapListener(ln, libknock.ServerConfig{ServerPort: 9000, Secrets: auth.StaticSecrets{"client-001": secret}})
+	ln = libknock.WrapListener(ln, libknock.ServerConfig{ServerPort: 9000, Secrets: libknock.NewStaticSecretResolver(map[string][]byte{"client-001": secret})})
 	for {
 		conn, err := ln.Accept()
 		if err != nil {

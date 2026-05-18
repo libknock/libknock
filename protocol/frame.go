@@ -25,10 +25,11 @@ const (
 )
 
 var (
-	ErrInvalidFrame       = errors.New("invalid frame")
-	ErrFrameTooLarge      = errors.New("frame too large")
-	ErrUnsupportedVersion = errors.New("unsupported protocol version")
-	ErrUnsupportedFlags   = errors.New("unsupported flags")
+	ErrInvalidFrame           = errors.New("invalid frame")
+	ErrFrameTooLarge          = errors.New("frame too large")
+	ErrInvalidFrameSizeBucket = errors.New("invalid frame size bucket")
+	ErrUnsupportedVersion     = errors.New("unsupported protocol version")
+	ErrUnsupportedFlags       = errors.New("unsupported flags")
 )
 
 type Header struct {

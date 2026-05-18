@@ -29,12 +29,10 @@ func ConfigureFirewallPort(fw firewall.Backend, port int) (firewall.Backend, err
 	return configured, nil
 }
 
-func CleanupFirewall(ctx context.Context, fw firewall.Backend) error {
+// CleanupFirewallDetached deliberately ignores parent contexts. Shutdown paths call it after serving contexts may already be cancelled, but firewall state should still get a short best-effort cleanup window.
+func CleanupFirewallDetached(fw firewall.Backend) error {
 	cleanupCtx, cancel := context.WithTimeout(context.Background(), FirewallOperationTimeout)
 	defer cancel()
-	if ctx != nil && ctx.Err() != nil {
-		return fw.Cleanup(cleanupCtx)
-	}
 	return fw.Cleanup(cleanupCtx)
 }
 

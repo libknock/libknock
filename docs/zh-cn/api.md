@@ -47,9 +47,20 @@ type PeerInfo = auth.PeerInfo
 func NewServer(cfg ServerConfig) (*Server, error)
 func NewMemoryReplayCache(ttl time.Duration) *auth.MemoryReplayCache
 func NewStaticSecretResolver(secrets map[string][]byte) auth.StaticSecrets
+const MinSecretSize = auth.MinSecretSize
+type SecretResolver = auth.SecretResolver
+type SecretCandidate = auth.SecretCandidate
+type ReplayCache = auth.ReplayCache
+type KnockSender = auth.KnockSender
+type SessionBoundKnockSender = auth.SessionBoundKnockSender
+type KnockSessionStore = auth.KnockSessionStore
+type EventSink = auth.EventSink
+type Policy = auth.Policy
+type FrameMeta = auth.FrameMeta
+type PeerIdentity = auth.PeerIdentity
 ```
 
-协议选择器、secret resolver 接口、gate 模式、relay 配置、防火墙后端、knock listener 和 observability hook 均通过对应子包访问。
+Gate 模式、relay 配置、防火墙后端、原始 knock listener 和 observability helper 均通过对应子包访问。参见英文版 [API surface](../api-surface.md) 了解兼容性边界。
 
 ## ServerConfig
 
@@ -177,7 +188,7 @@ auth.PaddingPolicyNone
 auth.PaddingPolicyRandomBucket
 ```
 
-`HintModeRouteHint` 是默认值。`HintModeNone` 仅适用于小型客户端集合，或会自行应用候选限制的解析器。
+`HintModeRouteHint` 是默认且推荐的模式。`HintModeNone` 仅适用于小型客户端集合，或会自行应用确定性候选限制的解析器。内置 static / rotating resolver 会按 `client_id` 排序候选；如果 no-hint 候选数超过 `ServerConfig.MaxAuthAttempts`，认证会返回 `auth.ErrTooManyCandidates`，而不是依赖 map 迭代顺序。
 
 默认桶为：
 

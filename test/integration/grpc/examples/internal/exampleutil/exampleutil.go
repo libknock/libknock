@@ -9,13 +9,6 @@ import (
 	libknock "github.com/libknock/libknock"
 )
 
-func Env(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
-}
-
 func MustSecret() []byte {
 	secret, err := base64.StdEncoding.DecodeString(os.Getenv("LIBKNOCK_SECRET_BASE64"))
 	if err != nil || len(secret) < libknock.MinSecretSize {
@@ -28,6 +21,5 @@ func MustPort(addr net.Addr) int {
 	if tcp, ok := addr.(*net.TCPAddr); ok {
 		return tcp.Port
 	}
-	log.Fatalf("expected TCP addr, got %T", addr)
 	return 0
 }

@@ -3,7 +3,6 @@
 package knock
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -92,8 +91,4 @@ func windowsSendIPPacketWinDivert(packet []byte) error {
 
 func windowsHasWinDivert() bool {
 	return windivertDLL.Load() == nil
-}
-
-func windowsIsDLLNotFound(err error) bool {
-	return errors.Is(err, syscall.ERROR_MOD_NOT_FOUND) || errors.Is(err, syscall.ERROR_PROC_NOT_FOUND)
 }

@@ -8,9 +8,6 @@ func (g *Gateway) emitKnockOK(ev KnockEvent) {
 func (g *Gateway) emitKnockFail(ev KnockFailEvent) {
 	gatewaycore.EventEmitter{Sink: g.Events}.KnockFail(ev)
 }
-func (g *Gateway) emitFirewallAllow(ev FirewallEvent) {
-	gatewaycore.EventEmitter{Sink: g.Events}.FirewallAllow(ev)
-}
 func (g *Gateway) emitFirewallError(ev FirewallErrorEvent) {
 	gatewaycore.EventEmitter{Sink: g.Events}.FirewallError(ev)
 }

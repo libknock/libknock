@@ -3,6 +3,7 @@ package auth
 import "errors"
 
 var (
+	ErrNilConn               = errors.New("nil connection")
 	ErrInvalidFrame          = errors.New("invalid frame")
 	ErrFrameTooLarge         = errors.New("frame too large")
 	ErrUnknownClient         = errors.New("unknown client")

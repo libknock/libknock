@@ -36,6 +36,9 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 }
 
 func (s *Server) Auth(ctx context.Context, conn net.Conn) (net.Conn, *PeerInfo, error) {
+	if conn == nil {
+		return nil, nil, ErrNilConn
+	}
 	if s == nil {
 		_ = conn.Close()
 		return nil, nil, ErrMissingSecretResolver
@@ -45,6 +48,9 @@ func (s *Server) Auth(ctx context.Context, conn net.Conn) (net.Conn, *PeerInfo, 
 
 // ServerAuth authenticates one caller-owned connection. It requires a caller-provided ReplayCache so replay state is shared across connections instead of reset per call.
 func ServerAuth(ctx context.Context, conn net.Conn, cfg ServerConfig) (net.Conn, *PeerInfo, error) {
+	if conn == nil {
+		return nil, nil, ErrNilConn
+	}
 	cfg = cfg.WithDefaults()
 	if err := cfg.Validate(); err != nil {
 		_ = conn.Close()
@@ -198,6 +204,9 @@ func authenticateEnvelopeV2(br *bufio.Reader, conn net.Conn, cfg ServerConfig, s
 	}
 	if len(candidates) == 0 {
 		return authResult{hint: h.RouteHint}, ErrUnknownClient
+	}
+	if envCfg.HintMode == protocol.EnvelopeV2HintModeNone && len(candidates) > cfg.MaxAuthAttempts {
+		return authResult{hint: h.RouteHint}, ErrTooManyCandidates
 	}
 	prefixLen := protocol.EnvelopeV2PrefixSize
 	if envCfg.HintMode == protocol.EnvelopeV2HintModeRouteHint {
@@ -398,7 +407,7 @@ func policyKey(addr net.Addr) string {
 }
 
 func publicError(err error) error {
-	if errors.Is(err, ErrInvalidFrame) || errors.Is(err, ErrFrameTooLarge) || errors.Is(err, ErrUnknownClient) || errors.Is(err, ErrAuthFailed) || errors.Is(err, ErrReplayDetected) || errors.Is(err, ErrTimeSkew) || errors.Is(err, ErrKnockRequired) || errors.Is(err, ErrUnsupportedVersion) || errors.Is(err, ErrUnsupportedFlags) || errors.Is(err, ErrSecretResolverFailed) || errors.Is(err, ErrRateLimited) || errors.Is(err, ErrServerProofRequired) || errors.Is(err, ErrServerProofFailed) || errors.Is(err, ErrTooManyCandidates) {
+	if errors.Is(err, ErrNilConn) || errors.Is(err, ErrInvalidFrame) || errors.Is(err, ErrFrameTooLarge) || errors.Is(err, ErrUnknownClient) || errors.Is(err, ErrAuthFailed) || errors.Is(err, ErrReplayDetected) || errors.Is(err, ErrTimeSkew) || errors.Is(err, ErrKnockRequired) || errors.Is(err, ErrUnsupportedVersion) || errors.Is(err, ErrUnsupportedFlags) || errors.Is(err, ErrSecretResolverFailed) || errors.Is(err, ErrRateLimited) || errors.Is(err, ErrServerProofRequired) || errors.Is(err, ErrServerProofFailed) || errors.Is(err, ErrTooManyCandidates) {
 		return err
 	}
 	return ErrAuthFailed

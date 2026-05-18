@@ -297,7 +297,7 @@ func (g *Gate) startKnock(ctx context.Context, ln net.Listener) error {
 	}
 	listener, err := g.openKnockListener(ln)
 	if err != nil {
-		_ = gatewaycore.CleanupFirewall(context.Background(), fw)
+		_ = gatewaycore.CleanupFirewallDetached(fw)
 		return err
 	}
 	knockCtx, cancel := context.WithCancel(ctx)
@@ -309,7 +309,7 @@ func (g *Gate) startKnock(ctx context.Context, ln net.Listener) error {
 	go func() {
 		defer g.wg.Done()
 		<-knockCtx.Done()
-		_ = gatewaycore.CleanupFirewall(context.Background(), fw)
+		_ = gatewaycore.CleanupFirewallDetached(fw)
 		_ = listener.Close()
 		_ = ln.Close()
 	}()

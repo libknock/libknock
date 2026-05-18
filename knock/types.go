@@ -86,14 +86,3 @@ func ValidateClientSecrets(clients []ClientSecret) error {
 	}
 	return nil
 }
-
-func clientSecretMap(clients []ClientSecret) (map[string]ClientSecret, error) {
-	if err := ValidateClientSecrets(clients); err != nil {
-		return nil, err
-	}
-	out := make(map[string]ClientSecret, len(clients))
-	for _, client := range clients {
-		out[client.ClientID] = client
-	}
-	return out, nil
-}

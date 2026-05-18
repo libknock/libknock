@@ -47,9 +47,20 @@ type PeerInfo = auth.PeerInfo
 func NewServer(cfg ServerConfig) (*Server, error)
 func NewMemoryReplayCache(ttl time.Duration) *auth.MemoryReplayCache
 func NewStaticSecretResolver(secrets map[string][]byte) auth.StaticSecrets
+const MinSecretSize = auth.MinSecretSize
+type SecretResolver = auth.SecretResolver
+type SecretCandidate = auth.SecretCandidate
+type ReplayCache = auth.ReplayCache
+type KnockSender = auth.KnockSender
+type SessionBoundKnockSender = auth.SessionBoundKnockSender
+type KnockSessionStore = auth.KnockSessionStore
+type EventSink = auth.EventSink
+type Policy = auth.Policy
+type FrameMeta = auth.FrameMeta
+type PeerIdentity = auth.PeerIdentity
 ```
 
-Protocol selectors, secret resolver interfaces, gate modes, relay configuration, firewall backends, knock listeners, and observability hooks are intentionally accessed through their subpackages.
+Gate modes, relay configuration, firewall backends, raw knock listeners, and observability helpers are intentionally accessed through their subpackages. See [API surface](api-surface.md) for the compatibility boundary.
 
 ## ServerConfig
 
@@ -162,7 +173,7 @@ auth.PaddingPolicyNone
 auth.PaddingPolicyRandomBucket
 ```
 
-`HintModeRouteHint` is the default. `HintModeNone` is appropriate only for small client sets or resolvers that apply their own candidate limits.
+`HintModeRouteHint` is the default and recommended mode. `HintModeNone` is appropriate only for small client sets or resolvers that apply deterministic candidate limits. Built-in static and rotating resolvers return candidates sorted by `client_id`; if a no-hint candidate set exceeds `ServerConfig.MaxAuthAttempts`, authentication fails with `auth.ErrTooManyCandidates` instead of depending on map iteration order.
 
 Default buckets are:
 

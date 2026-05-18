@@ -11,6 +11,27 @@ import (
 	"github.com/libknock/libknock/protocol"
 )
 
+func TestAuthRejectsNilConn(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	cfg := ServerConfig{ServerPort: 443, Secrets: StaticSecrets{"client": secret}, ReplayCache: NewMemoryReplayCache(time.Minute)}
+	if _, _, err := ServerAuth(context.Background(), nil, cfg); !errors.Is(err, ErrNilConn) {
+		t.Fatalf("ServerAuth err = %v, want nil conn", err)
+	}
+	server, err := NewServer(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := server.Auth(context.Background(), nil); !errors.Is(err, ErrNilConn) {
+		t.Fatalf("Server.Auth err = %v, want nil conn", err)
+	}
+	if err := ClientAuth(context.Background(), nil, ClientConfig{ClientID: "client", Secret: secret, ServerPort: 443}); !errors.Is(err, ErrNilConn) {
+		t.Fatalf("ClientAuth err = %v, want nil conn", err)
+	}
+	if _, err := ClientAuthWithInfo(context.Background(), nil, ClientConfig{ClientID: "client", Secret: secret, ServerPort: 443}); !errors.Is(err, ErrNilConn) {
+		t.Fatalf("ClientAuthWithInfo err = %v, want nil conn", err)
+	}
+}
+
 func TestUnsupportedWireVersionIsRejected(t *testing.T) {
 	secret := []byte("0123456789abcdef0123456789abcdef")
 	client, server := net.Pipe()
