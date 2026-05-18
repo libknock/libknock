@@ -1,0 +1,3 @@
+libknock notice file
+
+This repository includes third-party Go module dependencies as recorded by go.mod and, when vendored, by the vendor directory. See LICENSE for the project license and docs/license.md for release review guidance.

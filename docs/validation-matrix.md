@@ -1,0 +1,48 @@
+# Validation matrix
+
+Status legend:
+
+- `unit tested`: covered by regular Go tests.
+- `integration tested`: exercised by local loopback or repository integration tests.
+- `dry-run tested`: command generation or behavior validated without mutating a real host firewall.
+- `race tested`: covered by selected `go test -race` packages.
+- `fuzz smoke`: has short fuzz targets or commands suitable for CI/manual smoke.
+- `not hardware validated`: no repository evidence of end-to-end validation on a real target host/device.
+
+| Area | Unit | Integration | Dry-run | Race | Fuzz | Hardware status | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Root TCP auth SDK | unit tested | integration tested | n/a | race tested | fuzz smoke | not hardware validated for all network topologies | Listener wrapping, dialer auth, replay cache, server proof, v1/v2 protocol paths. |
+| Envelope v2 protocol | unit tested | integration tested | n/a | race tested | fuzz smoke | n/a | Route hint, padding buckets, AAD binding, candidate limits. |
+| UDP knock active listener | unit tested | integration tested | n/a | race tested | fuzz smoke | not hardware validated | Binary AEAD knock frames only; no JSON fallback. |
+| UDP sequence knock | unit tested | integration tested | n/a | race tested | fuzz smoke | not hardware validated | Sequence tracker and replay behavior covered by tests. |
+| Gate auth-only | unit tested | integration tested | n/a | race tested | n/a | not hardware validated for all deployments | Listener-owned lifecycle and replay-cache behavior. |
+| Gate knock-auth-only | unit tested | integration tested | n/a | race tested | fuzz smoke | not hardware validated | Requires prior knock and session-bound TCP auth. |
+| Gate knock-firewall modes | unit tested | integration tested | dry-run tested | race tested | fuzz smoke | not hardware validated | Real firewall mutation must be validated per host. |
+| Relay gateway | unit tested | integration tested | dry-run tested | race tested | fuzz smoke | not hardware validated | Separate upstream listener with shared knock/session logic. |
+| Linux nftables | unit tested | limited script validation | dry-run tested | n/a | n/a | not hardware validated | Validate with `scripts/validate-nftables.sh` on target hosts. |
+| Linux iptables | unit tested | limited script validation | dry-run tested | n/a | n/a | not hardware validated | Validate with `scripts/validate-iptables.sh` on target hosts. |
+| Linux ipset + iptables | unit tested | limited script validation | dry-run tested | n/a | n/a | not hardware validated | Validate with `scripts/validate-ipset-iptables.sh` on target hosts. |
+| UDP passive capture | unit tested | limited local package coverage | dry-run tested | race tested | fuzz smoke | not hardware validated | Requires packet capture privileges and platform support. |
+| Windows packet capture/firewall paths | partial unit coverage | no | no | no | no | not hardware validated | Requires dedicated Windows host validation. |
+| macOS BPF/pcap paths | partial unit coverage | no | no | no | no | not hardware validated | Requires dedicated macOS host validation. |
+| Policy limiter and ban list | unit tested | n/a | n/a | race tested | n/a | n/a | Limiter semantics remain distinct from generic TTL cache semantics. |
+| Observability events | unit tested | integration tested | n/a | n/a | n/a | n/a | Event sinks receive metadata; secrets and sealed payloads are not emitted. |
+
+Recommended local code gate:
+
+```sh
+scripts/check.sh
+scripts/check.sh
+```
+
+Optional smoke gates:
+
+```sh
+go test -run=^$ -bench=. ./auth ./protocol ./knock ./policy
+go test ./protocol -run=^$ -fuzz=FuzzEnvelopeV2Open -fuzztime=30s
+go test ./knock -run=^$ -fuzz=FuzzOpenKnockFrame -fuzztime=30s
+go test ./auth -run=^$ -fuzz=FuzzServerAuthMalformedInput -fuzztime=30s
+```
+
+
+Dependency model: the main release archive does not include `vendor/`. Keep `go.work` and `go.work.sum`; they bind the root module, examples, observability, and integration modules to the local workspace. Offline builds require a local module cache or dependency mirror.
