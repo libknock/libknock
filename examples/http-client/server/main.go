@@ -16,7 +16,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ln := libknock.WrapListener(raw, libknock.ServerConfig{ServerPort: exampleutil.MustPort(raw.Addr()), Secrets: libknock.NewStaticSecretResolver(map[string][]byte{"client-001": secret})})
+	ln, err := libknock.NewListener(raw, libknock.ServerConfig{ServerPort: exampleutil.MustPort(raw.Addr()), Secrets: libknock.NewStaticSecretResolver(map[string][]byte{"client-001": secret})})
+	if err != nil {
+		log.Fatal(err)
+	}
 	log.Printf("http server listening on %s", raw.Addr())
 	log.Fatal(http.Serve(ln, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok\n")) })))
 }

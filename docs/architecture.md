@@ -21,7 +21,7 @@ libknock is a TCP pre-application authentication SDK. Its core boundary is small
 
 ## Connection and replay lifecycle
 
-`NewServer`, `WrapListener`, and the `netx.AuthenticatedListener` path own one replay cache for the listener/server lifetime when the caller does not provide one. The lower-level `ServerAuth` function does not create a per-call cache because replay protection only works when nonce state is shared across connections.
+`NewServer`, `NewListener`, `WrapListener`, and the `netx.AuthenticatedListener` path own one replay cache for the listener/server lifetime when the caller does not provide one. The lower-level `ServerAuth` function does not create a per-call cache because replay protection only works when nonce state is shared across connections.
 
 On successful authentication, libknock returns a clean `net.Conn`. If the auth parser has read beyond the authentication frame, those extra bytes are preserved by an internal buffered connection so TLS, HTTP, gRPC, or custom protocols see exactly the application bytes they expect.
 

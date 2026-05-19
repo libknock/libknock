@@ -38,7 +38,7 @@ Use one replay cache per logical server instance.
 
 Recommended patterns:
 
-- `WrapListener`: listener-owned replay cache when one is not provided.
+- `NewListener` / `WrapListener`: listener-owned replay cache when one is not provided; prefer `NewListener` for startup-time error handling.
 - `NewServer`: server-owned replay cache when one is not provided.
 - `ServerAuth`: caller must provide a shared `ReplayCache`.
 

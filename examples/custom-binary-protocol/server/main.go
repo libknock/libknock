@@ -18,7 +18,10 @@ func main() {
 		log.Fatal(err)
 	}
 	defer ln.Close()
-	ln = libknock.WrapListener(ln, libknock.ServerConfig{ServerPort: exampleutil.MustPort(ln.Addr()), Secrets: libknock.NewStaticSecretResolver(map[string][]byte{"client-001": secret})})
+	ln, err = libknock.NewListener(ln, libknock.ServerConfig{ServerPort: exampleutil.MustPort(ln.Addr()), Secrets: libknock.NewStaticSecretResolver(map[string][]byte{"client-001": secret})})
+	if err != nil {
+		log.Fatal(err)
+	}
 	log.Printf("custom binary server listening on %s", ln.Addr())
 	for {
 		conn, err := ln.Accept()

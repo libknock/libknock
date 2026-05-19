@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.1.0-rc2 - 2026-05-19
+
+See [docs/release-notes/v0.1.0-rc2.md](docs/release-notes/v0.1.0-rc2.md).
+
+### Release status
+
+- Published as a GitHub pre-release candidate.
+- Focuses on rc1 hardening findings without changing the SDK boundary: libknock remains an embeddable TCP pre-application auth library, not a config-owning server.
+
+### Hardening
+
+- Firewall gate cleanup failures are now observable through `FirewallError` events and aggregated `Gate.Close` errors.
+- Auth listener workers use a listener-owned cancellable context plus per-connection auth timeout.
+- Dialer client configuration is validated before knock or TCP side effects.
+- SYN replay cache uses internal locking, atomic add-if-absent, and hex nonce keying.
+- Server proof nonce/prefix comparisons use the project constant-time helper.
+- Policy fallback keys are more specific for custom or malformed remote addresses.
+
+### API and release process
+
+- Added root `NewListener` and `WrapListenerE` error-returning listener APIs.
+- Release scripts are more robust when execute bits are lost, and strict duplication checks fail on missing tooling.
+- License, CI/local release gate, and release notes documentation were clarified.
+
 ## v0.1.0-rc1 - 2026-05-18
 
 See [docs/release-notes/v0.1.0-rc1.md](docs/release-notes/v0.1.0-rc1.md).

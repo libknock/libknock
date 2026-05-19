@@ -37,7 +37,7 @@ This directory contains detailed documentation for embedding, operating, testing
 The core API is intentionally small:
 
 ```go
-ln = libknock.WrapListener(ln, serverConfig)
+ln, err = libknock.NewListener(ln, serverConfig)
 server, err := libknock.NewServer(serverConfig)
 conn, peer, err := server.Auth(ctx, conn)
 conn, peer, err := libknock.ServerAuth(ctx, conn, serverConfig)
@@ -45,7 +45,7 @@ err = libknock.ClientAuth(ctx, conn, clientConfig)
 conn, err = (&libknock.Dialer{Base: baseDialer, Config: clientConfig}).DialContext(ctx, network, address)
 ```
 
-Use `WrapListener` or `NewServer` for normal server integrations. Use `ServerAuth` directly only when the embedding application already owns connection acceptance and replay-cache lifetime.
+Use `NewListener` or `NewServer` for normal server integrations. `WrapListener` is retained as a convenience API. Use `ServerAuth` directly only when the embedding application already owns connection acceptance and replay-cache lifetime.
 
 ## Recommended reading order
 

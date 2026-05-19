@@ -1,6 +1,6 @@
 # CI and local release gates
 
-The GitHub workflow runs the main module tests, vet, selected race tests, nested module tests, example builds, and cross-platform compile checks.
+The GitHub workflow runs the main module tests, vet, selected race tests, nested module tests, example builds, and cross-platform compile checks. Local release gates add short fuzz smoke, benchmark smoke, documentation link checks, duplication checks, and license/dependency checks. Do not describe these local-only gates as enforced by CI unless the workflow invokes `scripts/release-check.sh`.
 
 Local release gates should run:
 

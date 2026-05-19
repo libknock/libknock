@@ -22,7 +22,7 @@ if err != nil {
     return err
 }
 
-ln = libknock.WrapListener(ln, libknock.ServerConfig{
+ln, err = libknock.NewListener(ln, libknock.ServerConfig{
     ServerPort: 9000,
     Secrets: libknock.NewStaticSecretResolver(map[string][]byte{
         "client-001": secret,
@@ -39,9 +39,9 @@ for {
 }
 ```
 
-`WrapListener` preserves the usual `net.Listener` shape. After `Accept` returns, the connection has already passed `libknock` authentication.
+`NewListener` returns startup validation errors directly and preserves the usual `net.Listener` shape. After `Accept` returns, the connection has already passed `libknock` authentication.
 
-`WrapListener` and `NewServer` can create a server-owned replay cache. If you call the low-level `ServerAuth` function directly, provide a shared `ReplayCache` in `ServerConfig`.
+`NewListener`, `WrapListener`, and `NewServer` can create a server-owned replay cache. If you call the low-level `ServerAuth` function directly, provide a shared `ReplayCache` in `ServerConfig`.
 
 ## 3. Dial through libknock
 

@@ -40,7 +40,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ln := libknock.WrapListener(raw, libknock.ServerConfig{ServerPort: exampleutil.MustPort(raw.Addr()), Secrets: libknock.NewStaticSecretResolver(map[string][]byte{"client-001": secret})})
+	ln, err := libknock.NewListener(raw, libknock.ServerConfig{ServerPort: exampleutil.MustPort(raw.Addr()), Secrets: libknock.NewStaticSecretResolver(map[string][]byte{"client-001": secret})})
+	if err != nil {
+		log.Fatal(err)
+	}
 	server := grpc.NewServer(grpc.Creds(credentials.NewTLS(&tls.Config{Certificates: []tls.Certificate{cert}})))
 	registerPinger(server)
 	log.Printf("grpc server listening on %s", raw.Addr())

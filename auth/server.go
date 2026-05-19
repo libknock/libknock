@@ -393,17 +393,22 @@ func delayOnFail(ctx context.Context, cfg ServerConfig) {
 }
 
 func policyKey(addr net.Addr) string {
-	if tcp, ok := addr.(*net.TCPAddr); ok {
-		return tcp.IP.String()
-	}
 	if addr == nil {
-		return "unknown"
+		return "unknown:nil"
 	}
-	host, _, err := net.SplitHostPort(addr.String())
-	if err == nil {
+	if tcp, ok := addr.(*net.TCPAddr); ok {
+		if tcp.IP != nil {
+			return tcp.IP.String()
+		}
+		return "unknown:tcp"
+	}
+	if host, _, err := net.SplitHostPort(addr.String()); err == nil && host != "" {
 		return host
 	}
-	return "unknown"
+	if addr.String() == "" {
+		return "unknown:" + addr.Network()
+	}
+	return addr.Network() + ":" + addr.String()
 }
 
 func publicError(err error) error {

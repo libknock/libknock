@@ -28,10 +28,19 @@ check_single 'func acceptsAuthProtocol' acceptsAuthProtocol
 if command -v dupl >/dev/null 2>&1; then
   dupl -threshold 80 -vendor=false "$root" || status=$?
 else
-  echo "warning: dupl not found; install with: go install github.com/mibk/dupl@latest" >&2
+  if [ "${STRICT:-0}" = "1" ]; then
+    echo "error: dupl not found; install with: go install github.com/mibk/dupl@latest" >&2
+    status=1
+  else
+    echo "warning: dupl not found; install with: go install github.com/mibk/dupl@latest" >&2
+  fi
 fi
 
 if [ "$status" -ne 0 ]; then
+  if [ "${STRICT:-0}" = "1" ]; then
+    echo "duplication scan failed" >&2
+    exit "$status"
+  fi
   echo "warning: duplication scan reported matches; review whether shared code belongs in internal packages" >&2
 fi
 exit 0

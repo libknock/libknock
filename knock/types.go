@@ -3,6 +3,7 @@ package knock
 import (
 	"errors"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/libknock/libknock/auth"
@@ -66,7 +67,7 @@ type SequenceOptions struct {
 }
 
 func ValidateClientSecret(client ClientSecret) error {
-	if client.ClientID == "" || len(client.ClientID) > 65535 {
+	if client.ClientID == "" || len(client.ClientID) > 65535 || strings.Contains(client.ClientID, "\x00") {
 		return auth.ErrInvalidClientID
 	}
 	if len(client.Secret) < auth.MinSecretSize {

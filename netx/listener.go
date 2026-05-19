@@ -45,6 +45,8 @@ type AuthenticatedListener struct {
 
 	listenerConfig ListenerConfig
 	server         *auth.Server
+	ctx            context.Context
+	cancel         context.CancelFunc
 	ready          chan net.Conn
 	pending        chan net.Conn
 	done           chan struct{}
@@ -78,7 +80,8 @@ func WrapListenerWithConfigE(ln net.Listener, cfg ListenerConfig) (net.Listener,
 	if err != nil {
 		return nil, err
 	}
-	l := &AuthenticatedListener{Listener: ln, Config: cfg.Auth, listenerConfig: cfg, server: server, ready: make(chan net.Conn), pending: make(chan net.Conn, cfg.MaxPendingAuth), done: make(chan struct{}), inFlight: make(map[net.Conn]struct{})}
+	ctx, cancel := context.WithCancel(context.Background())
+	l := &AuthenticatedListener{Listener: ln, Config: cfg.Auth, listenerConfig: cfg, server: server, ctx: ctx, cancel: cancel, ready: make(chan net.Conn), pending: make(chan net.Conn, cfg.MaxPendingAuth), done: make(chan struct{}), inFlight: make(map[net.Conn]struct{})}
 	l.start()
 	return l, nil
 }
@@ -110,6 +113,7 @@ func (l *AuthenticatedListener) Close() error {
 	var err error
 	l.closeOnce.Do(func() {
 		l.setErr(net.ErrClosed)
+		l.cancel()
 		close(l.done)
 		err = l.Listener.Close()
 		l.closeInFlight()
@@ -157,10 +161,16 @@ func (l *AuthenticatedListener) authWorker() {
 		l.trackInFlight(conn)
 		var clean net.Conn
 		var err error
+		authCtx := l.ctx
+		if l.listenerConfig.Auth.AuthTimeout > 0 {
+			var cancel context.CancelFunc
+			authCtx, cancel = context.WithTimeout(l.ctx, l.listenerConfig.Auth.AuthTimeout)
+			defer cancel()
+		}
 		if l.server != nil {
-			clean, _, err = l.server.Auth(context.Background(), conn)
+			clean, _, err = l.server.Auth(authCtx, conn)
 		} else {
-			clean, _, err = auth.ServerAuth(context.Background(), conn, l.listenerConfig.Auth)
+			clean, _, err = auth.ServerAuth(authCtx, conn, l.listenerConfig.Auth)
 		}
 		l.untrackInFlight(conn)
 		if err != nil {

@@ -54,12 +54,14 @@ func AllowFirewall(ctx context.Context, fw firewall.Backend, remote netip.Addr, 
 	return nil
 }
 
-func RevokeFirewall(ctx context.Context, fw firewall.Backend, remote netip.Addr, port int, sink observability.GatewayEvents) {
+func RevokeFirewall(ctx context.Context, fw firewall.Backend, remote netip.Addr, port int, sink observability.GatewayEvents) error {
 	revokeCtx, cancel := FirewallOpContext(ctx)
 	defer cancel()
 	if err := fw.Revoke(revokeCtx, remote, port); err != nil {
 		EventEmitter{Sink: sink}.FirewallError(observability.FirewallErrorEvent{Remote: remote, Port: port, Err: err})
+		return err
 	}
+	return nil
 }
 
 func ValidateDropUDPKnockPort(fw firewall.Backend, method string) error {

@@ -21,7 +21,10 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	cfg := d.Config
+	cfg := d.Config.WithDefaults()
+	if err := cfg.ValidateRuntime(); err != nil {
+		return nil, err
+	}
 	if cfg.Knock != nil {
 		if len(cfg.SessionID) == 0 {
 			cfg.SessionID = make([]byte, 16)

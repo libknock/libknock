@@ -19,17 +19,9 @@ func ClientAuthWithInfo(ctx context.Context, conn net.Conn, cfg ClientConfig) (*
 		return nil, ErrNilConn
 	}
 	cfg = cfg.WithDefaults()
-	if err := cfg.Validate(); err != nil {
+	if err := cfg.ValidateRuntime(); err != nil {
 		_ = conn.Close()
 		return nil, err
-	}
-	if cfg.ClientID == "" || len(cfg.ClientID) > 65535 {
-		_ = conn.Close()
-		return nil, ErrInvalidClientID
-	}
-	if len(cfg.Secret) < MinSecretSize {
-		_ = conn.Close()
-		return nil, ErrInvalidSecret
 	}
 	if ctx == nil {
 		ctx = context.Background()

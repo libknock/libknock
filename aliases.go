@@ -34,7 +34,13 @@ func NewMemoryReplayCache(ttl time.Duration) *auth.MemoryReplayCache {
 	return auth.NewMemoryReplayCache(ttl)
 }
 func WrapListener(ln net.Listener, cfg ServerConfig) net.Listener { return netx.WrapListener(ln, cfg) }
-func NewServer(cfg ServerConfig) (*Server, error)                 { return auth.NewServer(cfg) }
+func NewListener(ln net.Listener, cfg ServerConfig) (net.Listener, error) {
+	return netx.WrapListenerWithConfigE(ln, netx.ListenerConfig{Auth: cfg})
+}
+func WrapListenerE(ln net.Listener, cfg ServerConfig) (net.Listener, error) {
+	return NewListener(ln, cfg)
+}
+func NewServer(cfg ServerConfig) (*Server, error) { return auth.NewServer(cfg) }
 func ServerAuth(ctx context.Context, conn net.Conn, cfg ServerConfig) (net.Conn, *PeerInfo, error) {
 	return auth.ServerAuth(ctx, conn, cfg)
 }

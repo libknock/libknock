@@ -6,7 +6,7 @@
 
 Use the root package for normal TCP service integration:
 
-- listener wrapping: `WrapListener`
+- listener wrapping: `NewListener`, `WrapListener`, `WrapListenerE`
 - explicit server object: `NewServer`, `Server`
 - one-shot auth: `ServerAuth`, `ClientAuth`
 - client dialing: `Dialer`

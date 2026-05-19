@@ -288,7 +288,7 @@ func VerifyEnvelopeV2ServerProof(proof, secret []byte, h EnvelopeV2Header, serve
 	if len(proof) != ServerProofSize || proof[0] != EnvelopeV2Version || proof[1] != ServerProofType {
 		return ErrInvalidFrame
 	}
-	if !bytes.Equal(proof[2:18], h.PrefixRandom[:16]) {
+	if !cryptox.ConstantTimeEqual(proof[2:18], h.PrefixRandom[:16]) {
 		return ErrInvalidFrame
 	}
 	if !cryptox.ConstantTimeEqual(proof[18:], computeEnvelopeV2ServerProof(secret, h, serverPort)) {

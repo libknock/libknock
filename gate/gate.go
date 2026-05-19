@@ -229,12 +229,27 @@ func (g *Gate) Close(ctx context.Context) error {
 		}
 		g.timers.StopAll()
 		g.wg.Wait()
-		if g.cfg.Mode == AuthOnly || g.cfg.Mode == KnockAuthOnly || cancel != nil {
-			return
+		if g.requiresFirewallCleanup() && cancel == nil {
+			g.recordCleanupErr(g.firewall().Cleanup(ctx))
 		}
-		g.closeErr = g.firewall().Cleanup(ctx)
 	})
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	return g.closeErr
+}
+
+func (g *Gate) requiresFirewallCleanup() bool {
+	return g.cfg.Mode == KnockFirewallAuth || g.cfg.Mode == KnockFirewallOnly
+}
+
+func (g *Gate) recordCleanupErr(err error) {
+	if err == nil {
+		return
+	}
+	gatewaycore.EventEmitter{Sink: g.cfg.Events}.FirewallError(observability.FirewallErrorEvent{Err: err})
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.closeErr = errors.Join(g.closeErr, err)
 }
 
 func (g *Gate) manage(ln net.Listener) net.Listener { return &managedListener{Listener: ln, gate: g} }
@@ -297,8 +312,9 @@ func (g *Gate) startKnock(ctx context.Context, ln net.Listener) error {
 	}
 	listener, err := g.openKnockListener(ln)
 	if err != nil {
-		_ = gatewaycore.CleanupFirewallDetached(fw)
-		return err
+		cleanupErr := gatewaycore.CleanupFirewallDetached(fw)
+		g.recordCleanupErr(cleanupErr)
+		return errors.Join(err, cleanupErr)
 	}
 	knockCtx, cancel := context.WithCancel(ctx)
 	g.mu.Lock()
@@ -309,7 +325,7 @@ func (g *Gate) startKnock(ctx context.Context, ln net.Listener) error {
 	go func() {
 		defer g.wg.Done()
 		<-knockCtx.Done()
-		_ = gatewaycore.CleanupFirewallDetached(fw)
+		g.recordCleanupErr(gatewaycore.CleanupFirewallDetached(fw))
 		_ = listener.Close()
 		_ = ln.Close()
 	}()
@@ -380,7 +396,9 @@ func (g *Gate) knockHandler(ctx context.Context, ln net.Listener) knock.Handler 
 		g.timers.AfterFunc(ttl, func() {
 			g.store.Expire(remote, storeClientID, time.Now())
 			if g.store.ExpireFirewall(remote, port, leaseID, time.Now()) && gatewaycore.ShouldManualRevoke(fw) {
-				gatewaycore.RevokeFirewall(ctx, fw, remote, port, g.cfg.Events)
+				if err := gatewaycore.RevokeFirewall(ctx, fw, remote, port, g.cfg.Events); err != nil {
+					g.recordCleanupErr(err)
+				}
 			}
 		})
 	}

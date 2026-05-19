@@ -189,7 +189,7 @@ func VerifyServerProof(proof, secret []byte, h Header, serverPort int) error {
 	if len(proof) != ServerProofSize || proof[0] != Version || proof[1] != ServerProofType {
 		return ErrInvalidFrame
 	}
-	if !bytes.Equal(proof[2:18], h.Nonce[:]) {
+	if !cryptox.ConstantTimeEqual(proof[2:18], h.Nonce[:]) {
 		return ErrInvalidFrame
 	}
 	if !cryptox.ConstantTimeEqual(proof[18:], computeServerProof(secret, h, serverPort)) {

@@ -1,6 +1,8 @@
 package knock
 
 import (
+	"encoding/hex"
+	"sync"
 	"time"
 
 	"github.com/libknock/libknock/auth"
@@ -17,6 +19,7 @@ func replayCache(opts ListenOptions) auth.ReplayCache {
 const defaultSYNReplayCacheMaxEntries = 65536
 
 type synReplayCache struct {
+	mu         sync.Mutex
 	ttl        time.Duration
 	sweepEvery time.Duration
 	nextSweep  time.Time
@@ -35,17 +38,18 @@ func (c *synReplayCache) CheckAndMark(clientID string, nonce []byte) error {
 		return nil
 	}
 	now := time.Now()
+	key := clientID + "\x00" + hex.EncodeToString(nonce)
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if c.nextSweep.IsZero() {
 		c.nextSweep = now.Add(c.sweepEvery)
 	} else if !now.Before(c.nextSweep) {
 		c.entries.Sweep(now)
 		c.nextSweep = now.Add(c.sweepEvery)
 	}
-	key := clientID + "\x00" + string(nonce)
-	if _, ok := c.entries.GetAt(key, now); ok {
+	if !c.entries.AddIfAbsent(key, struct{}{}, now.Add(c.ttl), now) {
 		return auth.ErrReplayDetected
 	}
-	c.entries.SetUntil(key, struct{}{}, now.Add(c.ttl))
 	return nil
 }
 

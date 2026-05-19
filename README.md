@@ -4,7 +4,7 @@
 [![Future License: Apache-2.0](https://img.shields.io/badge/future%20license-Apache--2.0-lightgrey.svg)](LICENSE)
 [![Go Reference](https://pkg.go.dev/badge/github.com/libknock/libknock.svg)](https://pkg.go.dev/github.com/libknock/libknock)
 
-Source-available under BSL-1.1. Production use is allowed, but offering libknock or derivative works as a hosted or managed service is restricted before it converts to Apache-2.0 on 2030-05-15.
+Source-available under BSL-1.1. Production use is allowed, but offering libknock or derivative works as a hosted or managed service is restricted before it converts to Apache-2.0 on 2030-05-15. See [LICENSE](LICENSE) and [license notes](docs/license.md).
 
 Embeddable TCP pre-application authentication SDK for Go applications.
 
@@ -54,13 +54,16 @@ func main() {
         log.Fatal(err)
     }
 
-    ln = libknock.WrapListener(ln, libknock.ServerConfig{
+    ln, err = libknock.NewListener(ln, libknock.ServerConfig{
         ServerPort: 9000,
         Secrets: libknock.NewStaticSecretResolver(map[string][]byte{
             "client-001": secret,
         }),
         ReplayCache: libknock.NewMemoryReplayCache(5 * time.Minute),
     })
+    if err != nil {
+        log.Fatal(err)
+    }
 
     for {
         conn, err := ln.Accept()
@@ -72,7 +75,7 @@ func main() {
 }
 ```
 
-`WrapListener` creates a listener-owned replay cache when one is not provided. If you call the low-level `ServerAuth` function directly, provide a shared `ReplayCache` yourself.
+`NewListener` returns startup validation errors directly and creates a listener-owned replay cache when one is not provided. `WrapListener` remains available as a convenience `net.Listener` wrapper; configuration errors surface from `Accept`. If you call the low-level `ServerAuth` function directly, provide a shared `ReplayCache` yourself.
 
 ## Minimal client
 
@@ -106,7 +109,7 @@ func dial(ctx context.Context) (net.Conn, error) {
 
 ## Root package and advanced packages
 
-The root package intentionally stays small. It exposes the common SDK path: `WrapListener`, `ServerAuth`, `ClientAuth`, `Dialer`, `ServerConfig`, `ClientConfig`, `PeerInfo`, `NewServer`, `NewMemoryReplayCache`, and `NewStaticSecretResolver`.
+The root package intentionally stays small. It exposes the common SDK path: `NewListener`, `WrapListener`, `WrapListenerE`, `ServerAuth`, `ClientAuth`, `Dialer`, `ServerConfig`, `ClientConfig`, `PeerInfo`, `NewServer`, `NewMemoryReplayCache`, and `NewStaticSecretResolver`.
 
 Advanced admission features live in subpackages. Use `auth` for protocol selectors and advanced auth hooks, `gate` for listener composition modes, `relay` for proxy-style gateways, `firewall` for platform backends, `knock` for knock senders/listeners, and `observability` for gateway events.
 

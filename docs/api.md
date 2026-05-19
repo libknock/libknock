@@ -5,14 +5,16 @@ This page summarizes the public API surface used by most integrations.
 ## Server-side entry points
 
 ```go
+func NewListener(ln net.Listener, cfg ServerConfig) (net.Listener, error)
 func WrapListener(ln net.Listener, cfg ServerConfig) net.Listener
+func WrapListenerE(ln net.Listener, cfg ServerConfig) (net.Listener, error)
 func NewServer(cfg ServerConfig) (*Server, error)
 func ServerAuth(ctx context.Context, conn net.Conn, cfg ServerConfig) (net.Conn, *PeerInfo, error)
 ```
 
-Use `WrapListener` for the common `net.Listener` workflow. Use `NewServer` when you want explicit startup validation and a server-owned replay cache. Use `ServerAuth` for custom pipelines that already own accepted connections.
+Use `NewListener` for production `net.Listener` startup so configuration errors return directly. `WrapListener` remains the convenience API when callers need a plain `net.Listener` return. Use `NewServer` when you want explicit startup validation and server-owned auth state without wrapping a listener. Use `ServerAuth` for custom pipelines that already own accepted connections.
 
-`ServerAuth` is a low-level function. It requires a shared `ReplayCache` in `ServerConfig`. `NewServer` and `WrapListener` can create and own that replay cache for the server/listener lifetime.
+`ServerAuth` is a low-level function. It requires a shared `ReplayCache` in `ServerConfig`. `NewServer`, `NewListener`, and `WrapListener` can create and own that replay cache for the server/listener lifetime.
 
 ## Client-side entry points
 
@@ -37,7 +39,9 @@ If `ClientConfig.Knock` is set, `Dialer` sends the configured knock before openi
 The root package is the small SDK surface used by most integrations:
 
 ```go
+func NewListener(ln net.Listener, cfg ServerConfig) (net.Listener, error)
 func WrapListener(ln net.Listener, cfg ServerConfig) net.Listener
+func WrapListenerE(ln net.Listener, cfg ServerConfig) (net.Listener, error)
 func ServerAuth(ctx context.Context, conn net.Conn, cfg ServerConfig) (net.Conn, *PeerInfo, error)
 func ClientAuth(ctx context.Context, conn net.Conn, cfg ClientConfig) error
 type Dialer = netx.Dialer

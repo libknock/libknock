@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/libknock/libknock/protocol"
@@ -257,15 +258,32 @@ func (c ServerConfig) Validate() error {
 	return nil
 }
 
-func (c ClientConfig) Validate() error {
-	if c.Protocol != "" && c.Protocol != AuthProtocolFrameV1 && c.Protocol != AuthProtocolEnvelopeV2 {
+func (c ClientConfig) Validate() error { return c.ValidateRuntime() }
+
+func (c ClientConfig) ValidateRuntime() error {
+	c = c.WithDefaults()
+	if c.ClientID == "" || len(c.ClientID) > 65535 || strings.Contains(c.ClientID, "\x00") {
+		return ErrInvalidClientID
+	}
+	if len(c.Secret) < MinSecretSize {
+		return ErrInvalidSecret
+	}
+	if c.ServerPort < 0 || c.ServerPort > 65535 {
+		return ErrInvalidFrame
+	}
+	if c.AuthTimeout <= 0 {
+		return ErrInvalidFrame
+	}
+	if c.Protocol != AuthProtocolFrameV1 && c.Protocol != AuthProtocolEnvelopeV2 {
 		return ErrUnsupportedVersion
 	}
-	if c.Protocol == "" || c.Protocol == AuthProtocolEnvelopeV2 {
+	if c.Protocol == AuthProtocolEnvelopeV2 {
 		return c.EnvelopeV2.WithDefaults().Validate(protocol.EnvelopeV2DefaultMaxSize)
 	}
 	return nil
 }
+
+func ValidateClientAuthConfig(c ClientConfig) error { return c.ValidateRuntime() }
 
 type protocolSet map[AuthProtocol]struct{}
 

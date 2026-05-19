@@ -17,7 +17,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ln = libknock.WrapListener(ln, libknock.ServerConfig{ServerPort: 9000, Secrets: libknock.NewStaticSecretResolver(map[string][]byte{"client-001": secret})})
+	ln, err = libknock.NewListener(ln, libknock.ServerConfig{ServerPort: 9000, Secrets: libknock.NewStaticSecretResolver(map[string][]byte{"client-001": secret})})
+	if err != nil {
+		log.Fatal(err)
+	}
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
