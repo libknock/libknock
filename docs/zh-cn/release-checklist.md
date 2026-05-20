@@ -31,10 +31,13 @@ go test -count=1 ./examples/grpc-client/... ./examples/grpc-server/...
 ```sh
 go test ./protocol -run=^$ -fuzz=FuzzDecodePayload -fuzztime=60s
 go test ./protocol -run=^$ -fuzz=FuzzReadFrame -fuzztime=60s
+go test ./protocol -run=^$ -fuzz=FuzzEnvelopeV2Open -fuzztime=60s
 go test ./auth -run=^$ -fuzz=FuzzServerAuthMalformedInput -fuzztime=60s
+go test ./knock -run=^$ -fuzz=FuzzOpenKnockFrame -fuzztime=60s
+go test ./knock -run=^$ -fuzz=FuzzSequenceTracker -fuzztime=60s
 ```
 
-对于稳定标签，根据项目策略增加 fuzz 时间。
+`scripts/release-check.sh` 运行代表性的短时 fuzz 冒烟；完整 protocol/knock/auth fuzz 集使用 `scripts/fuzz-long.sh`。对于稳定标签，根据项目策略增加 fuzz 时间。
 
 ## 4. 跨平台构建
 
@@ -143,7 +146,21 @@ done
 - 存在 `README.md`
 - 存在 `docs/`
 - 存在模块文件
+- 标准归档不包含 `vendor/`
+- `with-vendor` 归档包含 `vendor/modules.txt` 并可用 `-mod=vendor` 构建
+- SHA-256 文件与上传归档一致
 
+最小归档审计命令：
+
+```sh
+version=v0.1.0-rc2.5
+zipinfo -1 "dist/libknock-${version}.zip" | grep -Ev "^libknock-${version}/" && exit 1 || true
+zipinfo -1 "dist/libknock-${version}.zip" | grep -E "(^/|(^|/)\.\./)" && exit 1 || true
+zipinfo -1 "dist/libknock-${version}.zip" | grep -q "^libknock-${version}/vendor/" && exit 1 || true
+zipinfo -1 "dist/libknock-${version}-with-vendor.zip" | grep -q "^libknock-${version}/vendor/modules.txt"
+sha256sum -c "dist/libknock-${version}.zip.sha256"
+sha256sum -c "dist/libknock-${version}-with-vendor.zip.sha256"
+```
 
 ## 11. 发布决策
 
@@ -156,6 +173,7 @@ build passes
 race smoke tests pass
 nested modules pass
 docs are internally consistent
+api snapshot passes
 ```
 
 稳定标签的推荐阈值：
@@ -170,4 +188,17 @@ RC threshold
 ```
 
 
-依赖模型：主发布包不包含 `vendor/`。保留 `go.work` / `go.work.sum`，它们用于把根模块、examples、observability 与 integration 模块绑定到本地 workspace。离线构建需要本地 module cache 或依赖镜像。
+依赖模型：为普通 Go module 用户发布标准源码归档，同时发布 companion `with-vendor` 归档，用于离线审查、可复现本地审计、LLM 辅助集成和受限 CI。vendored 归档必须包含 `vendor/`、`vendor/modules.txt`、`go.work` 和 `go.work.sum`。
+
+## Vendored 归档验证
+
+发布 `with-vendor` 归档前运行：
+
+```sh
+go work vendor
+go test -mod=vendor ./...
+go vet -mod=vendor ./...
+go test -mod=vendor ./observability/prometheus/...
+go test -mod=vendor ./test/integration/grpc/...
+go test -mod=vendor ./examples/grpc-client/... ./examples/grpc-server/...
+```

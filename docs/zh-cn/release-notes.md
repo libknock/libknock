@@ -4,6 +4,7 @@
 
 当前英文发布说明入口：
 
+- [v0.1.0-rc2.5](../release-notes/v0.1.0-rc2.5.md)
 - [v0.1.0-rc2.4](../release-notes/v0.1.0-rc2.4.md)
 - [v0.1.0-rc2.3](../release-notes/v0.1.0-rc2.3.md)
 - [v0.1.0-rc2](../release-notes/v0.1.0-rc2.md)

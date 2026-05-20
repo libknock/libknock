@@ -13,6 +13,38 @@ Use the root package for normal TCP service integration:
 - configuration and metadata: `ServerConfig`, `ClientConfig`, `PeerInfo`
 - stable constants and extension interfaces: `MinSecretSize`, `SecretResolver`, `SecretCandidate`, `ReplayCache`, `KnockSender`, `SessionBoundKnockSender`, `KnockSessionStore`, `EventSink`, `Policy`, `FrameMeta`, `PeerIdentity`
 
+
+Stable root export snapshot for automated checks:
+
+```api-snapshot root
+ClientAuth
+ClientConfig
+Dialer
+EventSink
+FrameMeta
+KnockSender
+KnockSessionStore
+MinSecretSize
+NewListener
+NewMemoryReplayCache
+NewServer
+NewStaticSecretResolver
+PeerIdentity
+PeerInfo
+Policy
+ReplayCache
+SecretCandidate
+SecretResolver
+Server
+ServerAuth
+ServerConfig
+SessionBoundKnockSender
+WrapListener
+WrapListenerE
+```
+
+Run `scripts/check-api.sh` before release to catch accidental removal of stable root exports.
+
 ## Stable advanced auth package
 
 Use `auth` when an integration needs protocol selectors, custom secret resolution, replay cache implementations, policy hooks, events, envelope-v2 options, or knock-session binding.

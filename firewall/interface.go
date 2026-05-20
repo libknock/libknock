@@ -98,6 +98,7 @@ func (Noop) Revoke(context.Context, netip.Addr, int) error               { retur
 func (Noop) Cleanup(context.Context) error                               { return nil }
 
 func Validate(cfg Config) (Capabilities, error) {
+	cfg = cfg.WithDefaults()
 	b, err := New(cfg)
 	if err != nil {
 		return Capabilities{}, err
@@ -107,10 +108,11 @@ func Validate(cfg Config) (Capabilities, error) {
 			return Capabilities{}, err
 		}
 	}
-	return Describe(b.Name()), nil
+	return DescribeWithConfig(b.Name(), cfg), nil
 }
 
 func Probe(ctx context.Context, cfg Config) (ProbeResult, error) {
+	cfg = cfg.WithDefaults()
 	b, err := New(cfg)
 	if err != nil {
 		return ProbeResult{}, err
@@ -120,7 +122,7 @@ func Probe(ctx context.Context, cfg Config) (ProbeResult, error) {
 			return ProbeResult{}, err
 		}
 	}
-	caps := Describe(b.Name())
+	caps := DescribeWithConfig(b.Name(), cfg)
 	res := ProbeResult{Capabilities: caps, EUID: os.Geteuid(), HasCAPNetAdmin: hasEffectiveCapability(12), HasCAPNetRaw: hasEffectiveCapability(13)}
 	switch b.Name() {
 	case "nftables":
@@ -142,10 +144,12 @@ func Probe(ctx context.Context, cfg Config) (ProbeResult, error) {
 	return res, nil
 }
 
-func Describe(name string) Capabilities {
+func Describe(name string) Capabilities { return DescribeWithConfig(name, Config{}) }
+
+func DescribeWithConfig(name string, cfg Config) Capabilities {
 	c := Capabilities{Backend: name, Commands: make(map[string]string)}
 	for _, cmd := range backendCommands(name) {
-		if path, err := exec.LookPath(cmd); err == nil {
+		if path, ok := firewallCommandPath(cfg, cmd); ok {
 			c.Commands[cmd] = path
 		}
 	}
@@ -371,10 +375,22 @@ func validateFirewallObjectName(label, value string) error {
 func commandExists(name string) bool { _, err := exec.LookPath(name); return err == nil }
 
 func firewallCommandExists(cfg Config, name string) bool {
+	_, ok := firewallCommandPath(cfg, name)
+	return ok
+}
+
+func firewallCommandPath(cfg Config, name string) (string, bool) {
 	if cfg.Runner != nil {
-		return cfg.Runner.Run(context.Background(), name, "--help") == nil || cfg.Runner.Run(context.Background(), name, "--version") == nil
+		if cfg.Runner.Run(context.Background(), name, "--help") == nil || cfg.Runner.Run(context.Background(), name, "--version") == nil {
+			return name, true
+		}
+		return "", false
 	}
-	return commandExists(name)
+	path, err := exec.LookPath(name)
+	if err != nil {
+		return "", false
+	}
+	return path, true
 }
 
 func run(ctx context.Context, name string, args ...string) error {

@@ -48,5 +48,14 @@ go test ./knock -run=^$ -fuzz=FuzzOpenKnockFrame -fuzztime=30s
 go test ./auth -run=^$ -fuzz=FuzzServerAuthMalformedInput -fuzztime=30s
 ```
 
+Longer pre-stable fuzz and benchmark runs:
+
+```sh
+FUZZTIME=10m scripts/fuzz-long.sh
+BENCHTIME=3s BENCHCOUNT=3 scripts/benchmark.sh
+```
+
+Record benchmark output, Go version, OS/architecture, CPU model, and whether tests used `-mod=vendor`.
+
 
 Dependency model: publish a standard source archive for normal Go module users and a companion `with-vendor` archive for offline review, reproducible local audit, LLM-assisted integration, and restricted CI. The vendored archive must include `vendor/`, `vendor/modules.txt`, `go.work`, and `go.work.sum`.

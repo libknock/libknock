@@ -93,6 +93,7 @@ AAD rationale:
 - `prefix_random` binds the sealed body to its per-connection nonce and key-derivation context.
 - `route_hint` is authenticated when present so a sealed envelope cannot be moved between resolver buckets.
 - `bucket_size` is authenticated so padding cannot be stripped or expanded without AEAD failure.
+- `bucket_size` must not exceed the server `MaxFrameSize`. Tightening `ServerConfig.MaxFrameSize` requires tightening client `EnvelopeV2.FrameSizeBuckets` as well; a client that can randomly choose `384` or `512` will fail against a server capped at `256`.
 - `server_port` is authenticated for NAT and forwarding deployments where the socket port can differ from the protected service port.
 - `tcp-auth-envelope-v2` domain-separates the envelope from other libknock AEAD uses.
 

@@ -185,7 +185,7 @@ Default buckets are:
 128, 192, 256, 384, 512
 ```
 
-The client builder validates envelope v2 against the envelope v2 default maximum size. The server also validates configured buckets against `ServerConfig.MaxFrameSize`.
+The client builder validates envelope v2 against the envelope v2 default maximum size. The server also validates configured buckets against `ServerConfig.MaxFrameSize`. Keep client buckets at or below the server maximum: if a server is tightened to `MaxFrameSize: 256`, clients must not keep `384` or `512` in `FrameSizeBuckets`, because those envelopes will be rejected before authentication completes.
 
 ## Secret resolvers
 

@@ -143,7 +143,7 @@ The root package remains focused on the core TCP auth SDK; advanced gate modes l
 
 ## 7. Build SDK config from application config
 
-`libknock` does not read YAML, JSON, TOML, environment variables, or command-line flags. The embedding application owns configuration parsing and maps its config into typed SDK structs.
+`libknock` does not read YAML, JSON, TOML, environment variables, or command-line flags. The embedding application owns configuration parsing and maps its config into typed SDK structs. When exposing envelope v2 buckets in an application config, validate that every client bucket is less than or equal to the server `MaxFrameSize`; changing only the server-side maximum can make otherwise valid clients intermittently fail when they select a larger padding bucket.
 
 ```go
 func buildKnockServerConfig(c AppConfig) libknock.ServerConfig {

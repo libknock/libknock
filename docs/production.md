@@ -66,7 +66,7 @@ Backend notes:
 | `iptables` | Works as a fallback, but rule expiry is process-managed. |
 | `script` | Use when the application must call site-specific firewall tooling. |
 
-The plain `iptables` backend relies on revoke/cleanup timers. An unclean process exit can leave temporary rules until the next cleanup pass. Prefer `nftables` or `ipset-iptables` when kernel-enforced expiry is required.
+The plain `iptables` backend relies on revoke/cleanup timers. An unclean process exit can leave temporary ACCEPT rules until the next cleanup pass. Prefer `nftables` or `ipset-iptables` in production; use `iptables` as a compatibility fallback only, and document the operator cleanup command for the deployment. A normal restart should trigger startup cleanup for libknock-managed rules, but operators should still verify host state after crashes.
 
 ## Service lifecycle
 
@@ -99,14 +99,17 @@ case <-time.After(5 * time.Second):
 
 ## Linux notes
 
-Verify:
+Verify on a disposable or recoverable host before claiming production validation:
 
 - command availability: `nft`, `iptables`, `ipset` as applicable
 - effective privileges for firewall changes
 - protected port binding
 - IPv4 and IPv6 behavior
+- rule creation for valid knocks and rule removal after auth/revoke/TTL
 - cleanup idempotency
+- repeated start/stop cycles do not accumulate stale rules
 - startup cleanup after an unclean shutdown
+- documented rollback command for stale ACCEPT or DROP rules
 - UDP passive packet capture privileges when using passive UDP methods
 
 For packet capture paths, check `CAP_NET_RAW` or equivalent privileges required by the platform.

@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.0-rc2.5 - 2026-05-20
+
+### Release scope
+
+- Hardened `scripts/release-check.sh` so vendored release validation runs in a temporary checkout and does not remove an existing working-tree `vendor/` directory.
+- Updated `observability/prometheus` to depend on `github.com/libknock/libknock v0.1.0-rc2.5` for the matching pre-release line and normalized nested gRPC example protobuf versions for workspace vendor consistency.
+- Added `scripts/check-api.sh`, a root-package export snapshot in `docs/api-surface.md`, and release-checklist API-gate guidance.
+- Added `scripts/fuzz-long.sh` and `scripts/benchmark.sh` for longer fuzz and benchmark evidence covering protocol, knock, auth, replay cache, sequence tracker, and gate paths.
+- Clarified that envelope v2 client `FrameSizeBuckets` must stay within server `MaxFrameSize`.
+- Strengthened release and production documentation for iptables fallback cleanup risk, UDP passive privileges, firewall validation plans, artifact audit commands, Chinese checklist parity, and conservative platform-validation status.
+
+### Validation status
+
+- Automated gates cover source tests, vet, race smoke, nested modules, representative fuzz smoke, benchmark smoke, API snapshot, vendored archive validation, docs links, duplication scan, and package archive checks.
+- Real-host validation is still required before production claims for Linux firewall enforcement, UDP passive/drop interaction, TCP SYN paths, Windows packet integrations, macOS packet integrations, long fuzz campaigns, and production performance characterization.
+
 ## v0.1.0-rc2.4 - 2026-05-20
 
 See [docs/release-notes/v0.1.0-rc2.4.md](docs/release-notes/v0.1.0-rc2.4.md).

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
-	"os/exec"
 	"strconv"
 	"time"
 )
@@ -36,8 +35,8 @@ func (s *Script) Validate() error {
 		return nil
 	}
 	for _, cmd := range []string{s.cfg.Script.AllowCmd, s.cfg.Script.RevokeCmd, s.cfg.Script.CleanupCmd} {
-		if _, err := exec.LookPath(cmd); err != nil {
-			return fmt.Errorf("firewall backend script command %q was not found: %w", cmd, err)
+		if !firewallCommandExists(s.cfg, cmd) {
+			return fmt.Errorf("firewall backend script command %q was not found", cmd)
 		}
 	}
 	return nil

@@ -21,6 +21,7 @@ esac
 version=${1:-$(date -u +%Y%m%dT%H%M%SZ)}
 out_dir=${2:-/tmp}
 mkdir -p "$out_dir"
+out_dir=$(cd "$out_dir" && pwd)
 base="libknock-${version}"
 standard_out="${out_dir}/${base}.zip"
 vendor_out="${out_dir}/${base}-with-vendor.zip"

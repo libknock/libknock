@@ -53,7 +53,7 @@ go test ./knock -run=^$ -fuzz=FuzzOpenKnockFrame -fuzztime=60s
 go test ./knock -run=^$ -fuzz=FuzzSequenceTracker -fuzztime=60s
 ```
 
-For stable tags, increase fuzz time according to project policy.
+`scripts/release-check.sh` runs a representative short fuzz smoke; use `scripts/fuzz-long.sh` for the full protocol/knock/auth fuzz set. For stable tags, increase fuzz time according to project policy.
 
 ## 4. Cross-platform build
 
@@ -166,6 +166,18 @@ For source archives:
 - `with-vendor` archive includes `vendor/modules.txt` and builds with `-mod=vendor`
 - SHA-256 files correspond to the uploaded archives
 
+Minimal archive audit commands:
+
+```sh
+version=v0.1.0-rc2.5
+zipinfo -1 "dist/libknock-${version}.zip" | grep -Ev "^libknock-${version}/" && exit 1 || true
+zipinfo -1 "dist/libknock-${version}.zip" | grep -E "(^/|(^|/)\.\./)" && exit 1 || true
+zipinfo -1 "dist/libknock-${version}.zip" | grep -q "^libknock-${version}/vendor/" && exit 1 || true
+zipinfo -1 "dist/libknock-${version}-with-vendor.zip" | grep -q "^libknock-${version}/vendor/modules.txt"
+sha256sum -c "dist/libknock-${version}.zip.sha256"
+sha256sum -c "dist/libknock-${version}-with-vendor.zip.sha256"
+```
+
 
 ## 11. Release decision
 
@@ -178,6 +190,7 @@ build passes
 race smoke tests pass
 nested modules pass
 docs are internally consistent
+api snapshot passes
 ```
 
 Recommended threshold for stable tag:

@@ -6,7 +6,9 @@
 
 The root package is the preferred stable entry point for application integrations:
 
+- `NewListener`
 - `WrapListener`
+- `WrapListenerE`
 - `NewServer`
 - `ServerAuth`
 - `ClientAuth`
@@ -16,7 +18,7 @@ The root package is the preferred stable entry point for application integration
 - `PeerInfo`
 - root aliases for stable constants and auth interfaces such as `MinSecretSize`, `SecretResolver`, `ReplayCache`, `EventSink`, `Policy`, and knock-session interfaces
 
-The `auth` package is also intended for integrations that need explicit protocol selectors, custom resolvers, replay caches, policy hooks, or event sinks.
+The `auth` package is also intended for integrations that need explicit protocol selectors, custom resolvers, replay caches, policy hooks, or event sinks. The root export snapshot in `docs/api-surface.md` is checked by `scripts/check-api.sh` to catch accidental removals from the stable root surface.
 
 ## Advanced / wire-level packages
 

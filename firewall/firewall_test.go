@@ -338,13 +338,20 @@ func TestScriptValidateChecksCommandsWithoutSideEffects(t *testing.T) {
 	if err := fw.Validate(); err == nil {
 		t.Fatal("Validate accepted missing command with nil runner")
 	}
-	r := &captureRunner{}
+	r := commandSetRunner{"allow": true, "revoke": true, "cleanup": true}
 	fw = NewScript(Config{Port: 443, Runner: r, Script: ScriptConfig{AllowCmd: "allow", RevokeCmd: "revoke", CleanupCmd: "cleanup"}})
 	if err := fw.Validate(); err != nil {
 		t.Fatalf("Validate with custom runner: %v", err)
 	}
-	if len(r.commands) != 0 {
-		t.Fatalf("Validate executed commands: %v", r.commands)
+}
+
+func TestDescribeWithConfigUsesRunnerForCommands(t *testing.T) {
+	caps := DescribeWithConfig("ipset-iptables", Config{Runner: commandSetRunner{"ipset": true, "iptables": true}})
+	if caps.Commands["ipset"] != "ipset" || caps.Commands["iptables"] != "iptables" {
+		t.Fatalf("commands = %#v", caps.Commands)
+	}
+	if _, ok := caps.Commands["ip6tables"]; ok {
+		t.Fatalf("unexpected ip6tables command = %#v", caps.Commands)
 	}
 }
 

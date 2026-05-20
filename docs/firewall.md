@@ -103,9 +103,14 @@ fw, err := firewall.New(firewall.Config{
 
 ## iptables
 
-The iptables backend installs per-client ACCEPT rules and clears them during revoke or cleanup. The `ttl` passed to `Allow` is enforced by the gate/relay timer that later calls `Revoke`; iptables rules themselves do not carry a timeout.
+The iptables backend is the compatibility fallback. It installs per-client ACCEPT rules and clears them during revoke or cleanup. The `ttl` passed to `Allow` is enforced by the gate/relay timer that later calls `Revoke`; iptables rules themselves do not carry a timeout.
 
-If the hosting process exits unexpectedly, ACCEPT rules can remain until the next `Init`/`Cleanup` pass removes `libknock` managed rules. For production deployments that need kernel-enforced expiry, prefer `nftables` or `ipset-iptables`.
+Risk profile:
+
+- Prefer `nftables` or `ipset-iptables` for production because those backends can use kernel-managed expiry.
+- Use plain `iptables` only when the host cannot provide nftables or ipset.
+- If the hosting process exits unexpectedly, ACCEPT rules can remain until the next `Init`/`Cleanup` pass removes `libknock` managed rules.
+- Operators should run manual cleanup or restart the service to trigger startup cleanup after an unclean exit.
 
 Use a dedicated chain name for the protected service.
 
@@ -164,9 +169,19 @@ The script backend does not manage `DropUDPKnockPort`; use `nftables`, `iptables
 
 Rules:
 
-- Use only with `udp-passive` or `udp-passive-seq`.
+- Use only with `udp-passive` or `udp-passive-seq`; active UDP listeners should not DROP their own socket input.
+- The process needs packet-capture privileges such as root, `CAP_NET_RAW`, or platform-specific pcap/BPF rights before this mode can observe dropped packets.
 - Use a backend that supports the operation.
-- Verify the resulting firewall rules in a real environment.
+- Verify the resulting firewall rules and packet-capture behavior in a real environment. Repository tests only cover code paths and command shape.
+
+Validation checklist:
+
+1. Start passive UDP listener with `DropUDPKnockPort` enabled.
+2. Confirm the firewall backend creates a DROP rule for the UDP knock port without blocking the protected TCP port.
+3. Send a valid UDP knock from a remote host and confirm packet capture still observes it.
+4. Confirm the subsequent TCP auth succeeds only for the knocked source.
+5. Stop the service and confirm cleanup removes the UDP DROP rule and temporary TCP allow rules.
+6. On failure, run backend cleanup or remove the managed chain/set/rules, then restart with `DropUDPKnockPort` disabled.
 
 ## Gate and relay integration
 
@@ -193,7 +208,7 @@ res, err := firewall.Probe(ctx, firewall.Config{
 })
 ```
 
-Check command availability, effective user privileges, and backend-specific errors before opening the listener.
+Check command availability, effective user privileges, and backend-specific errors before opening the listener. `DescribeWithConfig` and `Probe` use `Config.Runner` when provided, so dry-run and doctor-style integrations can report command availability from their fake runner instead of always probing the host `PATH`.
 
 ## Firewall failure semantics
 
