@@ -19,10 +19,14 @@
 
 - `AuthTimeout` bounds the time spent reading authentication material.
 - `TimeWindow` bounds acceptable client timestamps.
-- `ReplayCache` rejects duplicate auth nonces across connections and should be shared by `ServerAuth` callers.
+- `ReplayCache` rejects duplicate auth nonces across connections and should be shared by `ServerAuth` callers. It fails closed when full: expired entries are swept first, then new nonces are rejected rather than evicting still-valid nonces.
 - `KnockNonceTTL` / knock replay caches reject duplicate knock frames.
 - Knock session TTL and `MaxConnectionsPerKnock` bind a successful knock to later TCP auth attempts when session binding is enabled.
 
 ## Secrets
 
 Secrets should come from operator-controlled configuration, files, KMS, or another resolver. Do not log secrets or serialize them into event payloads. Resolver/backend failures should remain locally diagnosable without revealing details to remote peers.
+
+## Low-level knock parsing
+
+`knock.OpenKnockFrame` is a server authentication API and requires a shared replay cache. `knock.ParseKnockFrameUnsafe` exists only for offline diagnostics and tests; it must not be used for public server admission paths because it skips replay protection.

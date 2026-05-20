@@ -31,17 +31,20 @@ func TestBanListBanSweepsExpiredEntriesPeriodically(t *testing.T) {
 	}
 }
 
-func TestLimiterEvictsOldestAtLimit(t *testing.T) {
+func TestLimiterRejectsNewKeyAtLimit(t *testing.T) {
 	now := time.Unix(0, 0)
 	l := NewLimiterWithClockAndLimit(Window{Limit: 10, Every: time.Minute}, ClockFunc(func() time.Time { return now }), 1)
-	if !l.Allow("old") || !l.Allow("new") {
-		t.Fatal("allow rejected")
+	if !l.Allow("old") {
+		t.Fatal("initial allow rejected")
+	}
+	if l.Allow("new") {
+		t.Fatal("new key should be rejected while active bucket is full")
 	}
 	if got := l.Len(); got != 1 {
 		t.Fatalf("Len = %d, want 1", got)
 	}
 	if !l.Allow("old") {
-		t.Fatal("old key should have been evicted and allowed again")
+		t.Fatal("old key should retain its bucket and remaining allowance")
 	}
 }
 

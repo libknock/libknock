@@ -109,7 +109,7 @@ func buildSequenceInfo(t *testing.T, clientID string, secret, sequenceID, sessio
 	if err != nil {
 		t.Fatal(err)
 	}
-	info, err := OpenKnockFrame(packet, ServerConfig{Clients: []ClientSecret{{ClientID: clientID, Secret: secret}}, ServerPort: 443, Method: method, AllowSequence: true})
+	info, err := ParseKnockFrameUnsafe(packet, ServerConfig{Clients: []ClientSecret{{ClientID: clientID, Secret: secret}}, ServerPort: 443, Method: method, AllowSequence: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestOpenKnockFrameRejectsUnsupportedAndInconsistentFlags(t *testing.T) {
 		t.Fatal(err)
 	}
 	packet[26] |= 0x80
-	if _, err := OpenKnockFrame(packet, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: secret}}, ServerPort: 443, Method: UDPMethod}); !errors.Is(err, auth.ErrUnsupportedFlags) {
+	if _, err := ParseKnockFrameUnsafe(packet, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: secret}}, ServerPort: 443, Method: UDPMethod}); !errors.Is(err, auth.ErrUnsupportedFlags) {
 		t.Fatalf("OpenKnockFrame unsupported flags err = %v", err)
 	}
 
@@ -180,7 +180,7 @@ func TestOpenKnockFrameRejectsUnsupportedAndInconsistentFlags(t *testing.T) {
 	packet = make([]byte, KnockFrameHeaderSize+len(sealed))
 	encodeKnockHeader(packet[:KnockFrameHeaderSize], h)
 	copy(packet[KnockFrameHeaderSize:], sealed)
-	if _, err := OpenKnockFrame(packet, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: secret}}, ServerPort: 443, Method: UDPMethod}); !errors.Is(err, auth.ErrInvalidFrame) {
+	if _, err := ParseKnockFrameUnsafe(packet, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: secret}}, ServerPort: 443, Method: UDPMethod}); !errors.Is(err, auth.ErrInvalidFrame) {
 		t.Fatalf("OpenKnockFrame inconsistent flags err = %v", err)
 	}
 }
@@ -199,7 +199,7 @@ func FuzzSequenceTracker(f *testing.F) {
 		if err != nil {
 			return
 		}
-		info, err := OpenKnockFrame(frame, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: benchKnockSecret}}, ServerPort: 443, Method: UDPSeqMethod, AllowSequence: true})
+		info, err := OpenKnockFrame(frame, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: benchKnockSecret}}, ServerPort: 443, Method: UDPSeqMethod, ReplayCache: auth.NewMemoryReplayCache(time.Minute), AllowSequence: true})
 		if err != nil {
 			return
 		}

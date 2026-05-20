@@ -52,16 +52,32 @@ func TestServerAuthRequiresExplicitReplayCache(t *testing.T) {
 	}
 }
 
-func TestMemoryReplayCacheEvictsOldestAtLimit(t *testing.T) {
-	c := NewMemoryReplayCacheWithLimit(time.Minute, 1)
+func TestMemoryReplayCacheFailsClosedAtLimit(t *testing.T) {
+	c := NewMemoryReplayCacheWithLimit(time.Minute, 2)
+	if err := c.CheckAndMark("client", []byte("nonce-1")); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.CheckAndMark("client", []byte("nonce-2")); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.CheckAndMark("client", []byte("nonce-3")); !errors.Is(err, ErrReplayCacheFull) {
+		t.Fatalf("full cache err = %v, want ErrReplayCacheFull", err)
+	}
+	if err := c.CheckAndMark("client", []byte("nonce-1")); !errors.Is(err, ErrReplayDetected) {
+		t.Fatalf("old nonce err = %v, want ErrReplayDetected", err)
+	}
+}
+
+func TestMemoryReplayCacheSweepsBeforeFull(t *testing.T) {
+	c := NewMemoryReplayCacheWithLimit(time.Second, 1)
+	now := time.Unix(100, 0)
+	c.now = func() time.Time { return now }
 	if err := c.CheckAndMark("client", []byte("old")); err != nil {
 		t.Fatal(err)
 	}
+	now = now.Add(2 * time.Second)
 	if err := c.CheckAndMark("client", []byte("new")); err != nil {
-		t.Fatal(err)
-	}
-	if err := c.CheckAndMark("client", []byte("old")); err != nil {
-		t.Fatalf("oldest nonce was not evicted: %v", err)
+		t.Fatalf("expired entry was not swept before full check: %v", err)
 	}
 }
 

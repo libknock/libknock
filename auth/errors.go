@@ -9,6 +9,7 @@ var (
 	ErrUnknownClient         = errors.New("unknown client")
 	ErrAuthFailed            = errors.New("auth failed")
 	ErrReplayDetected        = errors.New("replay detected")
+	ErrReplayCacheFull       = errors.New("replay cache full")
 	ErrTimeSkew              = errors.New("timestamp outside allowed window")
 	ErrKnockRequired         = errors.New("knock session required")
 	ErrUnsupportedVersion    = errors.New("unsupported protocol version")

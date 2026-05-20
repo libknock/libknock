@@ -58,3 +58,9 @@ SDK packages own:
 ## Rollback plan
 
 Keep service configs versioned. To roll back a deployment, stop the current runtime, run firewall cleanup for the configured backend and protected port, restore the previous service config, and restart the previous runtime.
+
+## rc2.2 security behavior changes
+
+- Replay caches fail closed when full. Operators should size replay caches for expected concurrent windows and alert on `ErrReplayCacheFull`; the cache will not evict still-valid nonces.
+- `knock.OpenKnockFrame` now requires `ServerConfig.ReplayCache`. Use the high-level UDP/passive/sequence listeners for default replay-cache ownership, or use `ParseKnockFrameUnsafe` only for offline diagnostics.
+- Limiters reject new keys when all buckets are active and `maxEntries` is reached. Increase `maxEntries` for legitimate high-cardinality traffic rather than relying on LRU eviction.

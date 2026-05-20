@@ -59,3 +59,10 @@ conn, err = (&libknock.Dialer{Base: baseDialer, Config: clientConfig}).DialConte
 1. [协议](protocols.md)
 2. [发布检查清单](release-checklist.md)
 3. [开发指南](development.md)
+
+## Coding-agent instructions
+
+- [Agent instructions](../agents/AGENTS.md)
+- [Integration guide](../agents/integration-guide.md)
+- [Anti-patterns](../agents/anti-patterns.md)
+- [Recipes](../agents/recipes/)

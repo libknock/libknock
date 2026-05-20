@@ -66,3 +66,10 @@ For release or contribution work, read:
 1. [Protocols](protocols.md)
 2. [Release checklist](release-checklist.md)
 3. [Development guide](development.md)
+
+## Coding-agent instructions
+
+- [Agent instructions](agents/AGENTS.md)
+- [Integration guide](agents/integration-guide.md)
+- [Anti-patterns](agents/anti-patterns.md)
+- [Recipes](agents/recipes/)

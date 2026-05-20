@@ -42,7 +42,7 @@ Recommended patterns:
 - `NewServer`: server-owned replay cache when one is not provided.
 - `ServerAuth`: caller must provide a shared `ReplayCache`.
 
-Do not create a new replay cache for every connection.
+Do not create a new replay cache for every connection. Replay caches fail closed when full: expired entries are swept first, and if all retained nonces are still within the replay window, new authentication material is rejected instead of evicting an active nonce. Treat replay-cache-full events as a capacity or abuse signal.
 
 ## Firewall backend selection
 
@@ -177,5 +177,7 @@ go -C test/integration/grpc test ./...
 Then complete the environment checks in [Release checklist](release-checklist.md).
 
 ## Policy cache boundaries
+
+Replay caches, knock session stores, ban lists, and rate limiters have related storage mechanics but different security semantics. `TTLLRU.Len()` reports stored entries and may include expired entries that have not been swept yet; use active counts or sweep-aware metrics when reporting pressure. Replay caches and rate limiters fail closed at capacity, while ban/session stores remain bounded TTL stores. Script firewall backends validate configured commands during `Init()` without executing allow/revoke/cleanup scripts.
 
 Replay caches, knock session stores, ban lists, and rate limiters have related storage mechanics but different security semantics. Replay cache entries reject duplicate authentication material, knock sessions bind a prior knock to a later TCP auth event, ban lists are TTL sets for coarse policy decisions, and limiters maintain counting windows. Do not merge these concepts in production configuration or observability just because they share an internal eviction primitive.

@@ -178,7 +178,24 @@ func BuildKnockFrame(opts KnockFrameOptions) ([]byte, error) {
 	return out, nil
 }
 
+// OpenKnockFrame validates and opens a server-side knock frame. A shared
+// ReplayCache is mandatory for authenticated server paths; use
+// ParseKnockFrameUnsafe only for offline diagnostics or tests that must not
+// make an authentication decision.
 func OpenKnockFrame(packet []byte, cfg ServerConfig) (*KnockInfo, error) {
+	if cfg.ReplayCache == nil {
+		return nil, auth.ErrMissingReplayCache
+	}
+	return openKnockFrame(packet, cfg)
+}
+
+// ParseKnockFrameUnsafe opens a knock frame without replay protection. It must
+// not be used on public server authentication paths.
+func ParseKnockFrameUnsafe(packet []byte, cfg ServerConfig) (*KnockInfo, error) {
+	return openKnockFrame(packet, cfg)
+}
+
+func openKnockFrame(packet []byte, cfg ServerConfig) (*KnockInfo, error) {
 	if cfg.MaxFrameSize <= 0 {
 		cfg.MaxFrameSize = DefaultMaxKnockFrameSize
 	}

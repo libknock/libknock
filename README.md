@@ -212,6 +212,9 @@ Use relay when the protected upstream is a separate TCP service rather than an a
 
 ## Documentation
 
+- Coding agents: [docs/agents/AGENTS.md](docs/agents/AGENTS.md), [integration guide](docs/agents/integration-guide.md), [anti-patterns](docs/agents/anti-patterns.md), [recipes](docs/agents/recipes/)
+- Examples: [examples/README.md](examples/README.md)
+
 - [Documentation index](docs/README.md)
 - [Getting started](docs/getting-started.md)
 - [Use cases](docs/use-cases.md)

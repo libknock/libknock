@@ -2,7 +2,10 @@ package firewall
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/netip"
+	"os/exec"
 	"strconv"
 	"time"
 )
@@ -26,6 +29,17 @@ func (s *Script) WithConfig(cfg Config) (Backend, error) {
 }
 
 func (s *Script) Init(ctx context.Context) error {
+	if s.cfg.Script.AllowCmd == "" || s.cfg.Script.RevokeCmd == "" || s.cfg.Script.CleanupCmd == "" {
+		return errors.New("firewall backend script requires allow_cmd, revoke_cmd, and cleanup_cmd")
+	}
+	if s.cfg.Runner != nil {
+		return nil
+	}
+	for _, cmd := range []string{s.cfg.Script.AllowCmd, s.cfg.Script.RevokeCmd, s.cfg.Script.CleanupCmd} {
+		if _, err := exec.LookPath(cmd); err != nil {
+			return fmt.Errorf("firewall backend script command %q was not found: %w", cmd, err)
+		}
+	}
 	return nil
 }
 

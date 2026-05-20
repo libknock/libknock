@@ -18,6 +18,17 @@ See [docs/release-notes/v0.1.0-rc2.md](docs/release-notes/v0.1.0-rc2.md).
 - Server proof nonce/prefix comparisons use the project constant-time helper.
 - Policy fallback keys are more specific for custom or malformed remote addresses.
 
+
+### RC2.2 hardening
+
+- Replay caches and knock replay paths now fail closed at capacity instead of evicting active nonces.
+- `knock.OpenKnockFrame` now requires a replay cache; no-replay parsing is isolated behind `ParseKnockFrameUnsafe`.
+- `AuthenticatedListener` auth timeout cancellation is scoped per connection, not per worker lifetime.
+- Policy limiters reject new keys at full active capacity; active buckets are not evicted by high-cardinality traffic.
+- Short-TTL bans sweep on a TTL-derived interval.
+- `TTLLRU.Len()` is documented as a stored-entry upper bound and `ActiveLen(now)` provides exact active counts.
+- Script firewall `Init()` validates command configuration without executing allow/revoke/cleanup.
+
 ### API and release process
 
 - Added root `NewListener` and `WrapListenerE` error-returning listener APIs.

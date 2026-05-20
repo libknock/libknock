@@ -144,3 +144,9 @@ Keep high-cardinality labels disabled unless your deployment has strict bounds.
 The Prometheus adapter normalizes method labels to the known method set and reports unknown method values as `unknown`. Failure reasons are exported as bounded reason classes rather than raw error strings. Client labels are disabled by default because client IDs can be high-cardinality; enable `IncludeClientLabel` only when the deployment has a bounded client set.
 
 Event payloads and metric labels must not include secrets, sealed payload bytes, raw frames, AEAD nonces beyond existing operational hints, or full unbounded error text. Prefer stable enums for `method`, `mode`, `reason`, and `stage`; map unrecognized values to `unknown` or a small bounded class.
+
+## Cache and capacity metrics
+
+`TTLLRU.Len()` is a stored-entry upper bound. It can include expired entries until a read path or `Sweep` removes them, so dashboards should not treat it as an exact active-entry count. For pressure signals, prefer sweep-aware active counts where available and record replay-cache-full or limiter-full decisions separately.
+
+Security-sensitive stores fail closed at capacity: replay caches reject new nonces rather than evicting active nonces, and rate limiters reject new keys rather than evicting active buckets. These events should be observable as capacity, abuse, or configuration signals, not as successful admissions.

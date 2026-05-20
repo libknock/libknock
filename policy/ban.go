@@ -11,10 +11,11 @@ const DefaultBanListMaxEntries = 65536
 
 // BanList is a TTL set for policy decisions. It reuses the internal cache primitive, while limiter counters remain separate because windowed counting and bans have different semantics.
 type BanList struct {
-	clock     Clock
-	mu        sync.Mutex
-	entries   *cache.TTLLRU[string, struct{}]
-	lastSweep time.Time
+	clock         Clock
+	mu            sync.Mutex
+	entries       *cache.TTLLRU[string, struct{}]
+	lastSweep     time.Time
+	sweepInterval time.Duration
 }
 
 func NewBanList() *BanList { return NewBanListWithClock(ClockFunc(time.Now)) }
@@ -28,7 +29,7 @@ func NewBanListWithClockAndLimit(clock Clock, maxEntries int) *BanList {
 	if maxEntries <= 0 {
 		maxEntries = DefaultBanListMaxEntries
 	}
-	return &BanList{clock: clock, entries: cache.NewTTLLRU[string, struct{}](maxEntries)}
+	return &BanList{clock: clock, entries: cache.NewTTLLRU[string, struct{}](maxEntries), sweepInterval: time.Minute}
 }
 
 func (b *BanList) Ban(key string, ttl time.Duration) {
@@ -45,6 +46,7 @@ func (b *BanList) BanUntil(key string, until time.Time) {
 	now := b.clock.Now()
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	b.updateSweepIntervalLocked(until.Sub(now))
 	b.sweepPeriodicallyLocked(now)
 	b.entries.SetUntil(key, struct{}{}, until)
 }
@@ -98,9 +100,29 @@ func (b *BanList) sweepPeriodicallyLocked(now time.Time) {
 		b.lastSweep = now
 		return
 	}
-	if now.Sub(b.lastSweep) < time.Minute {
+	interval := b.sweepInterval
+	if interval <= 0 {
+		interval = time.Minute
+	}
+	if now.Sub(b.lastSweep) < interval {
 		return
 	}
 	b.entries.Sweep(now)
 	b.lastSweep = now
+}
+
+func (b *BanList) updateSweepIntervalLocked(ttl time.Duration) {
+	if ttl <= 0 {
+		return
+	}
+	interval := ttl / 2
+	if interval <= 0 {
+		interval = ttl
+	}
+	if interval > time.Minute {
+		interval = time.Minute
+	}
+	if b.sweepInterval <= 0 || interval < b.sweepInterval {
+		b.sweepInterval = interval
+	}
 }

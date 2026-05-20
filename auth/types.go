@@ -236,6 +236,7 @@ func (s RotatingSecrets) ResolveCandidates(meta FrameMeta) ([]SecretCandidate, e
 }
 
 func (c ServerConfig) Validate() error {
+	c = c.WithDefaults()
 	if c.MaxFrameSize <= 0 {
 		c.MaxFrameSize = DefaultMaxFrameSize
 	}

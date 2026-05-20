@@ -1,0 +1,22 @@
+Project: libknock
+Purpose: Embeddable TCP pre-application authentication SDK for Go applications.
+
+Read first:
+- docs/agents/AGENTS.md
+- docs/agents/integration-guide.md
+- docs/getting-started.md
+- docs/api.md
+- docs/api-surface.md
+- docs/modes.md
+
+Normal integration:
+- Use the root package.
+- Prefer NewListener for server-side Go applications.
+- Prefer Dialer for client-side Go applications.
+- Use relay only for unmodified upstream binaries.
+
+Do not:
+- Start normal integrations from protocol/.
+- Create per-connection replay caches.
+- Put config-file parsing in SDK core.
+- Treat auth-only or knock-auth-only as port hiding.

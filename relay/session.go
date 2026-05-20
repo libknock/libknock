@@ -100,6 +100,10 @@ func (s *KnockSessionStore) CheckAndConsume(peer auth.PeerInfo, remote net.Addr)
 	}
 	return nil
 }
+
+// getSessionLocked is called with KnockSessionStore.mu held. The lock order is
+// fixed as KnockSessionStore.mu -> TTLLRU.mu; never call back into the session
+// store while holding a TTLLRU lock.
 func (s *KnockSessionStore) getSessionLocked(key string, now time.Time) (*session, bool, bool) {
 	entry, ok := s.sessions.Peek(key)
 	if !ok {

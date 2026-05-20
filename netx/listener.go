@@ -159,19 +159,7 @@ func (l *AuthenticatedListener) authWorker() {
 	defer l.wg.Done()
 	for conn := range l.pending {
 		l.trackInFlight(conn)
-		var clean net.Conn
-		var err error
-		authCtx := l.ctx
-		if l.listenerConfig.Auth.AuthTimeout > 0 {
-			var cancel context.CancelFunc
-			authCtx, cancel = context.WithTimeout(l.ctx, l.listenerConfig.Auth.AuthTimeout)
-			defer cancel()
-		}
-		if l.server != nil {
-			clean, _, err = l.server.Auth(authCtx, conn)
-		} else {
-			clean, _, err = auth.ServerAuth(authCtx, conn, l.listenerConfig.Auth)
-		}
+		clean, err := l.authenticateConn(conn)
 		l.untrackInFlight(conn)
 		if err != nil {
 			continue
@@ -183,6 +171,23 @@ func (l *AuthenticatedListener) authWorker() {
 			return
 		}
 	}
+}
+
+func (l *AuthenticatedListener) authenticateConn(conn net.Conn) (net.Conn, error) {
+	authCtx := l.ctx
+	cancel := func() {}
+	if l.listenerConfig.Auth.AuthTimeout > 0 {
+		authCtx, cancel = context.WithTimeout(l.ctx, l.listenerConfig.Auth.AuthTimeout)
+	}
+	defer cancel()
+	var clean net.Conn
+	var err error
+	if l.server != nil {
+		clean, _, err = l.server.Auth(authCtx, conn)
+	} else {
+		clean, _, err = auth.ServerAuth(authCtx, conn, l.listenerConfig.Auth)
+	}
+	return clean, err
 }
 
 func (l *AuthenticatedListener) setErr(err error) {

@@ -275,6 +275,10 @@ func ComputeEnvelopeV2RouteHint(secret []byte, prefixRandom [EnvelopeV2PrefixSiz
 	return cryptox.HMACTrunc64(secret, data)
 }
 
+// BuildEnvelopeV2ServerProof echoes the first 16 bytes of PrefixRandom for a
+// cheap header binding check. The authentication tag below still HMAC-binds
+// the full 24-byte PrefixRandom together with route hint, server port, and the
+// protocol label; changing any PrefixRandom bit invalidates the proof.
 func BuildEnvelopeV2ServerProof(secret []byte, h EnvelopeV2Header, serverPort int) []byte {
 	out := make([]byte, ServerProofSize)
 	out[0] = EnvelopeV2Version

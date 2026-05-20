@@ -48,7 +48,7 @@ func TestBuildOpenKnockFrameRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	info, err := OpenKnockFrame(packet, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: secret}}, ServerPort: 443, Method: UDPMethod})
+	info, err := ParseKnockFrameUnsafe(packet, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: secret}}, ServerPort: 443, Method: UDPMethod})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,11 +63,11 @@ func TestKnockFrameRejectsWrongSecretAndHint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := OpenKnockFrame(packet, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: []byte("fedcba9876543210fedcba9876543210")}}, ServerPort: 443, Method: UDPMethod}); !errors.Is(err, auth.ErrUnknownClient) {
+	if _, err := ParseKnockFrameUnsafe(packet, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: []byte("fedcba9876543210fedcba9876543210")}}, ServerPort: 443, Method: UDPMethod}); !errors.Is(err, auth.ErrUnknownClient) {
 		t.Fatalf("wrong secret err = %v, want unknown client", err)
 	}
 	packet[16] ^= 0x80
-	if _, err := OpenKnockFrame(packet, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: secret}}, ServerPort: 443, Method: UDPMethod}); !errors.Is(err, auth.ErrUnknownClient) {
+	if _, err := ParseKnockFrameUnsafe(packet, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: secret}}, ServerPort: 443, Method: UDPMethod}); !errors.Is(err, auth.ErrUnknownClient) {
 		t.Fatalf("wrong key hint err = %v, want unknown client", err)
 	}
 }
@@ -79,7 +79,7 @@ func TestKnockFrameRejectsTimestampReservedTruncatedAndRandom(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: secret}}, ServerPort: 443, Method: UDPMethod, TimeWindow: time.Second}
-	if _, err := OpenKnockFrame(oldPacket, cfg); !errors.Is(err, auth.ErrTimeSkew) {
+	if _, err := ParseKnockFrameUnsafe(oldPacket, cfg); !errors.Is(err, auth.ErrTimeSkew) {
 		t.Fatalf("old timestamp err = %v, want time skew", err)
 	}
 	packet, err := BuildKnockFrame(KnockFrameOptions{ClientID: "client", Secret: secret, ServerPort: 443, Method: UDPMethod})
@@ -87,16 +87,16 @@ func TestKnockFrameRejectsTimestampReservedTruncatedAndRandom(t *testing.T) {
 		t.Fatal(err)
 	}
 	packet[27] = 1
-	if _, err := OpenKnockFrame(packet, cfg); !errors.Is(err, auth.ErrInvalidFrame) {
+	if _, err := ParseKnockFrameUnsafe(packet, cfg); !errors.Is(err, auth.ErrInvalidFrame) {
 		t.Fatalf("reserved err = %v, want invalid frame", err)
 	}
-	if _, err := OpenKnockFrame(packet[:KnockFrameHeaderSize-1], cfg); !errors.Is(err, auth.ErrInvalidFrame) {
+	if _, err := ParseKnockFrameUnsafe(packet[:KnockFrameHeaderSize-1], cfg); !errors.Is(err, auth.ErrInvalidFrame) {
 		t.Fatalf("truncated err = %v, want invalid frame", err)
 	}
-	if _, err := OpenKnockFrame([]byte("not a libknock frame"), cfg); !errors.Is(err, auth.ErrInvalidFrame) {
+	if _, err := ParseKnockFrameUnsafe([]byte("not a libknock frame"), cfg); !errors.Is(err, auth.ErrInvalidFrame) {
 		t.Fatalf("random payload err = %v, want invalid frame", err)
 	}
-	if _, err := OpenKnockFrame([]byte(`{"client_id":"client","method":"udp"}`), cfg); !errors.Is(err, auth.ErrInvalidFrame) {
+	if _, err := ParseKnockFrameUnsafe([]byte(`{"client_id":"client","method":"udp"}`), cfg); !errors.Is(err, auth.ErrInvalidFrame) {
 		t.Fatalf("json payload err = %v, want invalid frame", err)
 	}
 }
@@ -208,6 +208,44 @@ func FuzzOpenKnockFrame(f *testing.F) {
 	f.Add([]byte(`{"client_id":"client","method":"udp"}`))
 	f.Add([]byte("random udp payload"))
 	f.Fuzz(func(t *testing.T, data []byte) {
-		_, _ = OpenKnockFrame(data, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: secret}}, ServerPort: 443, Method: UDPMethod})
+		_, _ = OpenKnockFrame(data, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: secret}}, ServerPort: 443, Method: UDPMethod, ReplayCache: auth.NewMemoryReplayCache(time.Minute)})
 	})
+}
+
+func TestOpenKnockFrameRequiresReplayCache(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	packet, err := BuildKnockFrame(KnockFrameOptions{ClientID: "client", Secret: secret, ServerPort: 443, Method: UDPMethod})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = OpenKnockFrame(packet, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: secret}}, ServerPort: 443, Method: UDPMethod})
+	if !errors.Is(err, auth.ErrMissingReplayCache) {
+		t.Fatalf("OpenKnockFrame err = %v, want missing replay cache", err)
+	}
+}
+
+func TestKnockReplayCacheFailsClosedAtLimit(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	cache := auth.NewMemoryReplayCacheWithLimit(time.Minute, 2)
+	cfg := ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: secret}}, ServerPort: 443, Method: UDPMethod, ReplayCache: cache}
+	packets := make([][]byte, 3)
+	for i := range packets {
+		packet, err := BuildKnockFrame(KnockFrameOptions{ClientID: "client", Secret: secret, ServerPort: 443, Method: UDPMethod})
+		if err != nil {
+			t.Fatal(err)
+		}
+		packets[i] = packet
+	}
+	if _, err := OpenKnockFrame(packets[0], cfg); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenKnockFrame(packets[1], cfg); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenKnockFrame(packets[2], cfg); !errors.Is(err, auth.ErrReplayCacheFull) {
+		t.Fatalf("third frame err = %v, want ErrReplayCacheFull", err)
+	}
+	if _, err := OpenKnockFrame(packets[0], cfg); !errors.Is(err, auth.ErrReplayDetected) {
+		t.Fatalf("first frame replay err = %v, want ErrReplayDetected", err)
+	}
 }

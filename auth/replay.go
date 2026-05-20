@@ -17,6 +17,7 @@ type MemoryReplayCache struct {
 	now        func() time.Time
 	sweepEvery time.Duration
 	nextSweep  time.Time
+	maxEntries int
 	entries    *cache.TTLLRU[string, struct{}]
 }
 
@@ -34,7 +35,7 @@ func NewMemoryReplayCacheWithLimit(ttl time.Duration, maxEntries int) *MemoryRep
 	if maxEntries <= 0 {
 		maxEntries = DefaultReplayCacheMaxEntries
 	}
-	return &MemoryReplayCache{ttl: ttl, now: time.Now, sweepEvery: replaySweepInterval(ttl), entries: cache.NewTTLLRU[string, struct{}](maxEntries)}
+	return &MemoryReplayCache{ttl: ttl, now: time.Now, sweepEvery: replaySweepInterval(ttl), maxEntries: maxEntries, entries: cache.NewTTLLRU[string, struct{}](maxEntries)}
 }
 
 func (c *MemoryReplayCache) CheckAndMark(clientID string, nonce []byte) error {
@@ -50,6 +51,16 @@ func (c *MemoryReplayCache) CheckAndMark(clientID string, nonce []byte) error {
 	} else if !now.Before(c.nextSweep) {
 		c.entries.Sweep(now)
 		c.nextSweep = now.Add(c.sweepEvery)
+	}
+	if c.entries.Len() >= c.maxEntries {
+		c.entries.Sweep(now)
+		c.nextSweep = now.Add(c.sweepEvery)
+	}
+	if c.entries.Len() >= c.maxEntries {
+		if _, ok := c.entries.GetAt(key, now); ok {
+			return ErrReplayDetected
+		}
+		return ErrReplayCacheFull
 	}
 	if !c.entries.AddIfAbsent(key, struct{}{}, now.Add(c.ttl), now) {
 		return ErrReplayDetected

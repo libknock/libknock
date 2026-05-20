@@ -1,6 +1,7 @@
 package knock
 
 import (
+	"github.com/libknock/libknock/auth"
 	"net"
 	"testing"
 	"time"
@@ -44,7 +45,7 @@ func buildBenchSequenceInfo(b testing.TB, seqID []byte, idx int) *KnockInfo {
 	if err != nil {
 		b.Fatal(err)
 	}
-	info, err := OpenKnockFrame(frame, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: benchKnockSecret}}, ServerPort: 443, Method: UDPSeqMethod, AllowSequence: true})
+	info, err := OpenKnockFrame(frame, ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: benchKnockSecret}}, ServerPort: 443, Method: UDPSeqMethod, ReplayCache: auth.NewMemoryReplayCache(time.Minute), AllowSequence: true})
 	if err != nil {
 		b.Fatal(err)
 	}

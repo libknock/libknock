@@ -107,3 +107,19 @@ func TestEnvelopeV2RejectsUnsupportedBuckets(t *testing.T) {
 		t.Fatalf("buckets = %v, want [128 192]", buckets)
 	}
 }
+
+func TestEnvelopeV2ServerProofBindsFullPrefixRandom(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	_, h, err := BuildEnvelopeV2("client", secret, 443, time.Now(), FlagServerProof, "", nil, nil, EnvelopeV2Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	proof := BuildEnvelopeV2ServerProof(secret, h, 443)
+	if err := VerifyEnvelopeV2ServerProof(proof, secret, h, 443); err != nil {
+		t.Fatal(err)
+	}
+	h.PrefixRandom[23] ^= 1
+	if err := VerifyEnvelopeV2ServerProof(proof, secret, h, 443); err == nil {
+		t.Fatal("proof verified after tampering with non-echoed PrefixRandom byte")
+	}
+}

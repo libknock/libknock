@@ -146,6 +146,9 @@ func (c *TTLLRU[K, V]) DeleteWhere(match func(Entry[K, V]) bool) int {
 	return removed
 }
 
+// Len returns the number of stored entries. The count is an upper bound for
+// active entries because expired entries remain counted until a read or Sweep
+// removes them. Use ActiveLen when callers need an exact active count.
 func (c *TTLLRU[K, V]) Len() int {
 	if c == nil {
 		return 0
@@ -153,6 +156,22 @@ func (c *TTLLRU[K, V]) Len() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return len(c.entries)
+}
+
+func (c *TTLLRU[K, V]) ActiveLen(now time.Time) int {
+	if c == nil {
+		return 0
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	active := 0
+	for elem := c.order.Front(); elem != nil; elem = elem.Next() {
+		entry := elem.Value.(*Entry[K, V])
+		if entry.ExpiresAt.After(now) {
+			active++
+		}
+	}
+	return active
 }
 
 func (c *TTLLRU[K, V]) Sweep(now time.Time) int {

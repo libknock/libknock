@@ -23,6 +23,7 @@ type synReplayCache struct {
 	ttl        time.Duration
 	sweepEvery time.Duration
 	nextSweep  time.Time
+	maxEntries int
 	entries    *cache.TTLLRU[string, struct{}]
 }
 
@@ -30,7 +31,7 @@ func newSYNReplayCache(ttl time.Duration) *synReplayCache {
 	if ttl <= 0 {
 		ttl = 2 * time.Minute
 	}
-	return &synReplayCache{ttl: ttl, sweepEvery: synReplaySweepInterval(ttl), entries: cache.NewTTLLRU[string, struct{}](defaultSYNReplayCacheMaxEntries)}
+	return &synReplayCache{ttl: ttl, sweepEvery: synReplaySweepInterval(ttl), maxEntries: defaultSYNReplayCacheMaxEntries, entries: cache.NewTTLLRU[string, struct{}](defaultSYNReplayCacheMaxEntries)}
 }
 
 func (c *synReplayCache) CheckAndMark(clientID string, nonce []byte) error {
@@ -46,6 +47,16 @@ func (c *synReplayCache) CheckAndMark(clientID string, nonce []byte) error {
 	} else if !now.Before(c.nextSweep) {
 		c.entries.Sweep(now)
 		c.nextSweep = now.Add(c.sweepEvery)
+	}
+	if c.entries.Len() >= c.maxEntries {
+		c.entries.Sweep(now)
+		c.nextSweep = now.Add(c.sweepEvery)
+	}
+	if c.entries.Len() >= c.maxEntries {
+		if _, ok := c.entries.GetAt(key, now); ok {
+			return auth.ErrReplayDetected
+		}
+		return auth.ErrReplayCacheFull
 	}
 	if !c.entries.AddIfAbsent(key, struct{}{}, now.Add(c.ttl), now) {
 		return auth.ErrReplayDetected

@@ -66,10 +66,10 @@ func (l *Limiter) AllowAt(key string, now time.Time) bool {
 	if len(l.entries) >= l.maxEntries {
 		l.sweepLocked(now)
 	}
-	if len(l.entries) >= l.maxEntries {
-		l.evictOldestLocked()
-	}
 	b := l.entries[key]
+	if b == nil && len(l.entries) >= l.maxEntries {
+		return false
+	}
 	if b == nil || !now.Before(b.start.Add(l.window.Every)) {
 		if b != nil {
 			l.removeBucketLocked(b)
@@ -144,12 +144,6 @@ func (l *Limiter) sweepLocked(now time.Time) int {
 		}
 	}
 	return removed
-}
-
-func (l *Limiter) evictOldestLocked() {
-	if elem := l.order.Front(); elem != nil {
-		l.removeBucketLocked(elem.Value.(*bucket))
-	}
 }
 
 func (l *Limiter) removeBucketLocked(b *bucket) {
