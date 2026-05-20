@@ -8,7 +8,7 @@ This checklist is intended for release candidates and stable tags.
 scripts/check.sh
 ```
 
-The script works both inside a git checkout and from a release source zip; release archives intentionally do not include `vendor/`.
+The script works both inside a git checkout and from a release source zip. Publish both `libknock-VERSION.zip` for normal Go module users and `libknock-VERSION-with-vendor.zip` for offline review, reproducible local audit, LLM-assisted integration, and restricted CI. The vendored archive must include `vendor/`, `vendor/modules.txt`, `go.work`, and `go.work.sum`.
 
 Expanded core commands, if running steps manually:
 
@@ -19,7 +19,7 @@ scripts/check.sh
 go test -count=1 ./...
 go vet ./...
 go build ./...
-go test -race -count=1 ./auth ./firewall ./knock ./netx ./policy ./protocol ./relay
+go test -race -count=1 ./auth ./firewall ./gate ./knock ./netx ./policy ./protocol ./relay
 ```
 
 ## 2. Nested modules
@@ -155,13 +155,6 @@ For source archives:
 - `docs/` present
 - module files present
 
-For documentation-only overlay archives:
-
-- `README.md` at archive root
-- `docs/` at archive root
-- no source files
-- no vendor files
-- no generated binaries
 
 ## 11. Release decision
 
@@ -188,4 +181,18 @@ RC threshold
 ```
 
 
-Dependency model: the main release archive does not include `vendor/`. Keep `go.work` and `go.work.sum`; they bind the root module, examples, observability, and integration modules to the local workspace. Offline builds require a local module cache or dependency mirror.
+Dependency model: publish a standard source archive for normal Go module users and a companion `with-vendor` archive for offline review, reproducible local audit, LLM-assisted integration, and restricted CI. The vendored archive must include `vendor/`, `vendor/modules.txt`, `go.work`, and `go.work.sum`.
+
+
+## Vendored archive validation
+
+Before publishing the `with-vendor` archive, run:
+
+```sh
+go work vendor
+go test -mod=vendor ./...
+go vet -mod=vendor ./...
+go test -mod=vendor ./observability/prometheus/...
+go test -mod=vendor ./test/integration/grpc/...
+go test -mod=vendor ./examples/grpc-client/... ./examples/grpc-server/...
+```

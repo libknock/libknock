@@ -79,7 +79,7 @@ func (l *udpListener) Serve(ctx context.Context, handler Handler) error {
 		if !ok || udpAddr.IP == nil {
 			continue
 		}
-		if opts.AllowPacket != nil && !opts.AllowPacket(udpAddr.IP) {
+		if !allowKnockPacket(opts, udpAddr.IP) {
 			continue
 		}
 		info, err := OpenKnockFrame(buf[:n], ServerConfig{Clients: opts.Clients, ServerPort: opts.Port, Method: UDPMethod, TimeWindow: opts.TimeWindow, MaxFrameSize: maxFrameSize, ReplayCache: replay})
@@ -97,6 +97,19 @@ func (l *udpListener) Serve(ctx context.Context, handler Handler) error {
 		}
 		handler(Event{SourceIP: udpAddr.IP, ClientID: info.ClientID, Nonce: hex.EncodeToString(info.Nonce), Method: UDPMethod, SessionID: info.SessionID})
 	}
+}
+
+func allowKnockPacket(opts ListenOptions, ip net.IP) bool {
+	if opts.AllowPacket != nil && !opts.AllowPacket(ip) {
+		return false
+	}
+	if opts.PacketLimiter != nil && !opts.PacketLimiter.Allow(ip) {
+		if opts.InvalidPacket != nil {
+			opts.InvalidPacket(ip, "packet_rate_limited")
+		}
+		return false
+	}
+	return true
 }
 
 func ListenUDP(ctx context.Context, listen string, opts ListenOptions, handler Handler) error {

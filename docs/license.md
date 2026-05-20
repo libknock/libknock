@@ -16,4 +16,4 @@ Before an RC archive is published:
 go list -m all
 ```
 
-Record direct dependencies and any required notices in the release notes. The main release archive does not include vendor/. If a dependency license is unclear, do not claim the release package is license-reviewed until the ambiguity is resolved.
+Record direct dependencies and any required notices in the release notes. The standard source archive omits vendor/; the companion with-vendor archive includes vendored dependency source for offline audit. If a dependency license is unclear, do not claim the release package is license-reviewed until the ambiguity is resolved.

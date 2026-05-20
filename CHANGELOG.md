@@ -7,7 +7,7 @@ See [docs/release-notes/v0.1.0-rc2.md](docs/release-notes/v0.1.0-rc2.md).
 ### Release status
 
 - Published as a GitHub pre-release candidate.
-- Focuses on rc1 hardening findings without changing the SDK boundary: libknock remains an embeddable TCP pre-application auth library, not a config-owning server.
+- Focuses on release-candidate hardening findings without changing the SDK boundary: libknock remains an embeddable TCP pre-application auth library, not a config-owning server.
 
 ### Hardening
 
@@ -19,7 +19,7 @@ See [docs/release-notes/v0.1.0-rc2.md](docs/release-notes/v0.1.0-rc2.md).
 - Policy fallback keys are more specific for custom or malformed remote addresses.
 
 
-### RC2.2 hardening
+### RC2.x hardening
 
 - Replay caches and knock replay paths now fail closed at capacity instead of evicting active nonces.
 - `knock.OpenKnockFrame` now requires a replay cache; no-replay parsing is isolated behind `ParseKnockFrameUnsafe`.

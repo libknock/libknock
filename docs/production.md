@@ -149,6 +149,7 @@ Use these controls for public listeners:
 - `Policy` hook
 - relay `MaxPendingAuth`
 - relay `MaxAuthWorkers`
+- `knock.ListenOptions.PacketLimiter` for public UDP knock listeners
 - application-level connection limits
 
 ## Logging policy
@@ -169,7 +170,7 @@ Before a stable release, run:
 ```sh
 go test ./...
 go vet ./...
-go test -race ./auth ./firewall ./knock ./netx ./policy ./protocol ./relay
+go test -race ./auth ./firewall ./gate ./knock ./netx ./policy ./protocol ./relay
 go -C observability/prometheus test ./...
 go -C test/integration/grpc test ./...
 ```
@@ -181,3 +182,8 @@ Then complete the environment checks in [Release checklist](release-checklist.md
 Replay caches, knock session stores, ban lists, and rate limiters have related storage mechanics but different security semantics. `TTLLRU.Len()` reports stored entries and may include expired entries that have not been swept yet; use active counts or sweep-aware metrics when reporting pressure. Replay caches and rate limiters fail closed at capacity, while ban/session stores remain bounded TTL stores. Script firewall backends validate configured commands during `Init()` without executing allow/revoke/cleanup scripts.
 
 Replay caches, knock session stores, ban lists, and rate limiters have related storage mechanics but different security semantics. Replay cache entries reject duplicate authentication material, knock sessions bind a prior knock to a later TCP auth event, ban lists are TTL sets for coarse policy decisions, and limiters maintain counting windows. Do not merge these concepts in production configuration or observability just because they share an internal eviction primitive.
+
+
+## Authentication callbacks
+
+`OnAuthenticated` is called synchronously on the auth path. The callback must return quickly and must not perform blocking I/O. If asynchronous processing is needed, start a goroutine from the callback and manage its lifetime explicitly.

@@ -22,6 +22,7 @@
 - `ReplayCache` rejects duplicate auth nonces across connections and should be shared by `ServerAuth` callers. It fails closed when full: expired entries are swept first, then new nonces are rejected rather than evicting still-valid nonces.
 - `KnockNonceTTL` / knock replay caches reject duplicate knock frames.
 - Knock session TTL and `MaxConnectionsPerKnock` bind a successful knock to later TCP auth attempts when session binding is enabled.
+- Active UDP knock listeners can use `ListenOptions.PacketLimiter` to reject packets by source IP before AEAD opening. Enable this for public UDP knock ports so floods do not force candidate-secret work.
 
 ## Secrets
 

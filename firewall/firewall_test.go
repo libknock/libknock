@@ -333,17 +333,17 @@ func TestBackendsRoundSubsecondTTLUpToOneSecond(t *testing.T) {
 	}
 }
 
-func TestScriptInitValidatesCommandsWithoutSideEffects(t *testing.T) {
+func TestScriptValidateChecksCommandsWithoutSideEffects(t *testing.T) {
 	fw := NewScript(Config{Port: 443, Script: ScriptConfig{AllowCmd: "definitely-missing-libknock-allow", RevokeCmd: "true", CleanupCmd: "true"}})
-	if err := fw.Init(context.Background()); err == nil {
-		t.Fatal("Init accepted missing command with nil runner")
+	if err := fw.Validate(); err == nil {
+		t.Fatal("Validate accepted missing command with nil runner")
 	}
 	r := &captureRunner{}
 	fw = NewScript(Config{Port: 443, Runner: r, Script: ScriptConfig{AllowCmd: "allow", RevokeCmd: "revoke", CleanupCmd: "cleanup"}})
-	if err := fw.Init(context.Background()); err != nil {
-		t.Fatalf("Init with custom runner: %v", err)
+	if err := fw.Validate(); err != nil {
+		t.Fatalf("Validate with custom runner: %v", err)
 	}
 	if len(r.commands) != 0 {
-		t.Fatalf("Init executed commands: %v", r.commands)
+		t.Fatalf("Validate executed commands: %v", r.commands)
 	}
 }

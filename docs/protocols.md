@@ -37,7 +37,7 @@ Properties:
 - Unknown TCP flags are rejected.
 - The currently valid TCP flag is `FlagServerProof`.
 
-Client identity is represented by `client_id_hash` inside the sealed payload. The server maps the verified hash back to the resolved client identity.
+Client identity is represented by `client_id_hash` inside the sealed payload. The server maps the verified hash back to the resolved client identity. Frame v1 uses `nonce || key_hint` as the XChaCha20-Poly1305 nonce and also authenticates `key_hint` in AAD; this is retained as wire-compatible v1 behavior and must not be changed in v0.1.x release candidates.
 
 ## TCP auth protocol v2
 

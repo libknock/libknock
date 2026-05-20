@@ -18,3 +18,14 @@ go test -run=^$ -bench=. ./auth ./protocol ./knock ./policy ./gate
 ```
 
 Docs link checks and license/dependency checks are intentionally included in the release script as lightweight static checks. They do not replace manual review of generated release archives.
+
+
+## Optional strict duplication gate
+
+`DUPL_THRESHOLD=120 STRICT=1 scripts/check-duplication.sh` is a release-maintainer gate and requires `dupl`:
+
+```sh
+go install github.com/mibk/dupl@latest
+```
+
+Normal contributors may run the script without `STRICT=1`; missing `dupl` is then warning-only.

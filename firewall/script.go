@@ -28,7 +28,7 @@ func (s *Script) WithConfig(cfg Config) (Backend, error) {
 	return NewScript(cfg), nil
 }
 
-func (s *Script) Init(ctx context.Context) error {
+func (s *Script) Validate() error {
 	if s.cfg.Script.AllowCmd == "" || s.cfg.Script.RevokeCmd == "" || s.cfg.Script.CleanupCmd == "" {
 		return errors.New("firewall backend script requires allow_cmd, revoke_cmd, and cleanup_cmd")
 	}
@@ -42,6 +42,8 @@ func (s *Script) Init(ctx context.Context) error {
 	}
 	return nil
 }
+
+func (s *Script) Init(ctx context.Context) error { return s.Validate() }
 
 func (s *Script) Allow(ctx context.Context, addr netip.Addr, port int, ttl time.Duration) error {
 	if err := validateBoundFirewallPort(s.Name(), s.cfg.Port, port); err != nil {

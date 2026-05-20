@@ -28,6 +28,10 @@ type Event struct {
 	SessionID []byte
 }
 
+type PacketLimiter interface {
+	Allow(net.IP) bool
+}
+
 type ListenOptions struct {
 	Port             int
 	KnockPort        int
@@ -37,6 +41,7 @@ type ListenOptions struct {
 	RequireSessionID bool
 	ReplayCache      auth.ReplayCache
 	AllowPacket      func(net.IP) bool
+	PacketLimiter    PacketLimiter
 	InvalidPacket    func(net.IP, string)
 	Sequence         SequenceOptions
 	NonceTTL         time.Duration

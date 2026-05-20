@@ -32,7 +32,7 @@ Recommended local code gate:
 
 ```sh
 scripts/check.sh
-scripts/check.sh
+scripts/release-check.sh
 ```
 
 Optional smoke gates:
@@ -45,4 +45,4 @@ go test ./auth -run=^$ -fuzz=FuzzServerAuthMalformedInput -fuzztime=30s
 ```
 
 
-Dependency model: the main release archive does not include `vendor/`. Keep `go.work` and `go.work.sum`; they bind the root module, examples, observability, and integration modules to the local workspace. Offline builds require a local module cache or dependency mirror.
+Dependency model: publish a standard source archive for normal Go module users and a companion `with-vendor` archive for offline review, reproducible local audit, LLM-assisted integration, and restricted CI. The vendored archive must include `vendor/`, `vendor/modules.txt`, `go.work`, and `go.work.sum`.

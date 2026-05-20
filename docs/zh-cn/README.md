@@ -30,7 +30,7 @@
 核心 API 有意保持很小：
 
 ```go
-ln = libknock.WrapListener(ln, serverConfig)
+ln = libknock.NewListener(ln, serverConfig)
 server, err := libknock.NewServer(serverConfig)
 conn, peer, err := server.Auth(ctx, conn)
 conn, peer, err := libknock.ServerAuth(ctx, conn, serverConfig)
@@ -38,7 +38,7 @@ err = libknock.ClientAuth(ctx, conn, clientConfig)
 conn, err = (&libknock.Dialer{Base: baseDialer, Config: clientConfig}).DialContext(ctx, network, address)
 ```
 
-常规服务器集成请使用 `WrapListener` 或 `NewServer`。仅当嵌入应用程序已经自行拥有连接接受流程和重放缓存生命周期时，才直接使用 `ServerAuth`。
+常规服务器集成请优先使用 `NewListener`（或兼容包装 `WrapListener`）以及 `NewServer`。仅当嵌入应用程序已经自行拥有连接接受流程和重放缓存生命周期时，才直接使用 `ServerAuth`。
 
 ## 推荐阅读顺序
 

@@ -47,7 +47,10 @@ func TestFirewallOnlyTTLExpiresWildcardSessionAndRevokes(t *testing.T) {
 	}
 	remote := netip.MustParseAddr("192.0.2.10")
 	g.store.Add(remote, firewallOnlyClientID, 25*time.Millisecond, 1)
-	leaseID := g.store.MarkFirewall(remote, 443, 25*time.Millisecond)
+	leaseID, ok := g.store.MarkFirewall(remote, 443, 25*time.Millisecond)
+	if !ok {
+		t.Fatal("mark firewall lease failed")
+	}
 	time.Sleep(35 * time.Millisecond)
 	if !g.store.Expire(remote, firewallOnlyClientID, time.Now()) {
 		t.Fatal("wildcard firewall-only session did not expire")
@@ -71,7 +74,10 @@ func TestFirewallOnlyTTLRevokesAfterConsumedSession(t *testing.T) {
 	}
 	remote := netip.MustParseAddr("192.0.2.20")
 	g.store.Add(remote, firewallOnlyClientID, 20*time.Millisecond, 1)
-	leaseID := g.store.MarkFirewall(remote, 443, 20*time.Millisecond)
+	leaseID, ok := g.store.MarkFirewall(remote, 443, 20*time.Millisecond)
+	if !ok {
+		t.Fatal("mark firewall lease failed")
+	}
 	if err := g.store.CheckAndConsume(auth.PeerInfo{PeerIdentity: auth.PeerIdentity{ClientID: firewallOnlyClientID}}, &net.TCPAddr{IP: remote.AsSlice(), Port: 50000}); err != nil {
 		t.Fatal(err)
 	}

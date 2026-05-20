@@ -10,4 +10,4 @@ The project intentionally keeps shared runtime mechanics internal unless they ar
 - Repeated cryptographic primitives belong in `internal/cryptox`.
 - Example-only helpers belong under `examples/internal/exampleutil` and must not become public API.
 
-Run `scripts/check-duplication.sh` during review. It is warning-only so it does not block intentional duplication in tests or small protocol-specific code.
+Run `scripts/check-duplication.sh` during review. Normal review mode is warning-only so it does not block intentional duplication in tests or small protocol-specific code. Release maintainers run `DUPL_THRESHOLD=120 STRICT=1 scripts/check-duplication.sh`, which requires `dupl` (`go install github.com/mibk/dupl@latest`) and fails when the tool is missing or reports duplicates.

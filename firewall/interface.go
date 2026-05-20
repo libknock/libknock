@@ -33,6 +33,10 @@ type ConfigurableBackend interface {
 	WithConfig(Config) (Backend, error)
 }
 
+type ValidatingBackend interface {
+	Validate() error
+}
+
 type Checker interface {
 	IsAllowed(ctx context.Context, remote netip.Addr, port int) (bool, error)
 }
@@ -88,6 +92,11 @@ func Validate(cfg Config) (Capabilities, error) {
 	if err != nil {
 		return Capabilities{}, err
 	}
+	if v, ok := b.(ValidatingBackend); ok {
+		if err := v.Validate(); err != nil {
+			return Capabilities{}, err
+		}
+	}
 	return Describe(b.Name()), nil
 }
 
@@ -95,6 +104,11 @@ func Probe(ctx context.Context, cfg Config) (ProbeResult, error) {
 	b, err := New(cfg)
 	if err != nil {
 		return ProbeResult{}, err
+	}
+	if v, ok := b.(ValidatingBackend); ok {
+		if err := v.Validate(); err != nil {
+			return ProbeResult{}, err
+		}
 	}
 	caps := Describe(b.Name())
 	res := ProbeResult{Capabilities: caps, EUID: os.Geteuid(), HasCAPNetAdmin: hasEffectiveCapability(12), HasCAPNetRaw: hasEffectiveCapability(13)}

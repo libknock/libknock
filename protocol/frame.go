@@ -313,6 +313,9 @@ func deriveAEADKey(secret []byte, h Header) []byte {
 	return cryptox.MustHKDFSHA256(secret, h.Nonce[:], info, chacha20poly1305.KeySize)
 }
 
+// aeadNonce preserves the TCP frame v1 wire behavior: the AEAD nonce is the
+// 16-byte frame nonce plus key_hint. key_hint is also present in AAD; keeping it
+// here avoids a wire-format change in the v0.1 release-candidate line.
 func aeadNonce(h Header) []byte {
 	var nonce [chacha20poly1305.NonceSizeX]byte
 	copy(nonce[0:16], h.Nonce[:])

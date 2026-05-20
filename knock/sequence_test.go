@@ -103,6 +103,31 @@ func TestUDPSequenceRejectsInvalidTotalsAndMixedIdentity(t *testing.T) {
 	}
 }
 
+func TestUDPSequenceTrackerBoundsCompletedEntries(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	now := time.Now()
+	tr := newSequenceTracker(SequenceOptions{Length: 2, SlotSeconds: 30, Window: 10 * time.Millisecond, MaxInflightPerIP: 8, MaxTotalInflight: 2}, 50*time.Millisecond)
+	src := net.ParseIP("192.0.2.1")
+	for i := 0; i < 5; i++ {
+		seqID := []byte{byte(i), 's', 'e', 'q', 'u', 'e', 'n', 'c', 'e', '-', 'i', 'd', '-', '0', '0', '0'}
+		first := buildSequenceInfo(t, "client", secret, seqID, nil, 0, 2, UDPSeqMethod)
+		second := buildSequenceInfo(t, "client", secret, seqID, nil, 1, 2, UDPSeqMethod)
+		if ok, err := tr.add(src, first, now); err != nil || ok {
+			t.Fatalf("first add %d ok=%v err=%v", i, ok, err)
+		}
+		_, _ = tr.add(src, second, now)
+	}
+	if got := tr.completed.ActiveLen(now); got > 2 {
+		t.Fatalf("completed active len = %d, want <= 2", got)
+	}
+	tr.mu.Lock()
+	tr.pruneLocked(now.Add(3 * time.Minute))
+	tr.mu.Unlock()
+	if got := tr.completed.ActiveLen(now.Add(3 * time.Minute)); got != 0 {
+		t.Fatalf("completed active len after expiry = %d, want 0", got)
+	}
+}
+
 func buildSequenceInfo(t *testing.T, clientID string, secret, sequenceID, sessionID []byte, index, total int, method string) *KnockInfo {
 	t.Helper()
 	packet, err := BuildKnockFrame(KnockFrameOptions{ClientID: clientID, Secret: secret, ServerPort: 443, Method: method, SessionID: sessionID, SequenceID: sequenceID, SequenceIndex: index, SequenceTotal: total})

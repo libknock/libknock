@@ -36,8 +36,15 @@ func (g *Gateway) listenKnock(ctx context.Context, fw firewall.Backend, store *K
 			return
 		}
 		uses := g.MaxConnectionsPerKnock
+		leaseID, ok := store.MarkFirewall(remote, port, ttl)
+		if !ok {
+			if gatewaycore.ShouldManualRevoke(fw) {
+				_ = gatewaycore.RevokeFirewall(ctx, fw, remote, port, g.Events)
+			}
+			g.emitKnockFail(KnockFailEvent{Remote: remote, ClientID: ev.ClientID, Reason: "firewall_lease_store_full"})
+			return
+		}
 		store.AddSessionForPort(remote, ev.ClientID, ev.SessionID, port, ttl, uses)
-		leaseID := store.MarkFirewall(remote, port, ttl)
 		g.emitKnockOK(KnockEvent{Remote: remote, ClientID: ev.ClientID, Method: ev.Method, Parts: ev.Parts, TTL: ttl})
 		timers.AfterFunc(ttl, func() {
 			store.Expire(remote, ev.ClientID, time.Now())

@@ -158,6 +158,15 @@ func (c *TTLLRU[K, V]) Len() int {
 	return len(c.entries)
 }
 
+func (c *TTLLRU[K, V]) Cap() int {
+	if c == nil {
+		return 0
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.maxEntries
+}
+
 func (c *TTLLRU[K, V]) ActiveLen(now time.Time) int {
 	if c == nil {
 		return 0

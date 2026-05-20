@@ -3,7 +3,15 @@ set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$root"
 
-fmt=$(gofmt -l $(git ls-files '*.go' ':!:vendor/**'))
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  mapfile -t go_files < <(git ls-files '*.go' ':!:vendor/**')
+else
+  mapfile -t go_files < <(find . -name '*.go' -not -path './vendor/*' -print | sort)
+fi
+fmt=""
+if ((${#go_files[@]})); then
+  fmt=$(gofmt -l "${go_files[@]}")
+fi
 if [ -n "$fmt" ]; then
   echo "$fmt"
   exit 1

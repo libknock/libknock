@@ -44,6 +44,8 @@ type KnockFrameOptions struct {
 	SequenceTotal int
 	ClientRandom  []byte
 	Extensions    []protocol.TLV
+	Nonce         []byte
+	KeyHint       uint64
 	Timestamp     time.Time
 	MaxFrameSize  int
 }
@@ -150,10 +152,19 @@ func BuildKnockFrame(opts KnockFrameOptions) ([]byte, error) {
 		return nil, err
 	}
 	var h knockFrameHeader
-	if _, err := rand.Read(h.Nonce[:]); err != nil {
+	if len(opts.Nonce) > 0 {
+		if len(opts.Nonce) != KnockNonceBytes {
+			return nil, auth.ErrInvalidFrame
+		}
+		copy(h.Nonce[:], opts.Nonce)
+	} else if _, err := rand.Read(h.Nonce[:]); err != nil {
 		return nil, err
 	}
-	h.KeyHint = ComputeKnockKeyHint(opts.Secret, h.Nonce, opts.ServerPort)
+	if opts.KeyHint != 0 {
+		h.KeyHint = opts.KeyHint
+	} else {
+		h.KeyHint = ComputeKnockKeyHint(opts.Secret, h.Nonce, opts.ServerPort)
+	}
 	if payload.FrameType == KnockFrameTypeUDPSequence {
 		h.Flags |= KnockFlagSequence
 	}

@@ -98,6 +98,7 @@ type ListenOptions struct {
     RequireSessionID bool
     ReplayCache      auth.ReplayCache
     AllowPacket      func(net.IP) bool
+    PacketLimiter    PacketLimiter
     InvalidPacket    func(net.IP, string)
     Sequence         SequenceOptions
     NonceTTL         time.Duration

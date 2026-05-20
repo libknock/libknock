@@ -48,11 +48,11 @@ func (c *synReplayCache) CheckAndMark(clientID string, nonce []byte) error {
 		c.entries.Sweep(now)
 		c.nextSweep = now.Add(c.sweepEvery)
 	}
-	if c.entries.Len() >= c.maxEntries {
+	if c.entries.ActiveLen(now) >= c.maxEntries {
 		c.entries.Sweep(now)
 		c.nextSweep = now.Add(c.sweepEvery)
 	}
-	if c.entries.Len() >= c.maxEntries {
+	if c.entries.ActiveLen(now) >= c.maxEntries {
 		if _, ok := c.entries.GetAt(key, now); ok {
 			return auth.ErrReplayDetected
 		}

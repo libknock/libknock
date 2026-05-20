@@ -160,7 +160,10 @@ func TestGatewayTTLFirewallLeaseSurvivesConsumedSession(t *testing.T) {
 	store := NewKnockSessionStore()
 	remote := netip.MustParseAddr("127.0.0.1")
 	store.Add(remote, "client", 20*time.Millisecond, 1)
-	leaseID := store.MarkFirewall(remote, 9443, 20*time.Millisecond)
+	leaseID, ok := store.MarkFirewall(remote, 9443, 20*time.Millisecond)
+	if !ok {
+		t.Fatal("mark firewall lease failed")
+	}
 	if err := store.CheckAndConsume(auth.PeerInfo{PeerIdentity: auth.PeerIdentity{ClientID: "client"}}, &net.TCPAddr{IP: remote.AsSlice(), Port: 50000}); err != nil {
 		t.Fatal(err)
 	}
@@ -262,7 +265,7 @@ func TestGatewayRemoveAfterAuthFallsBackToConnLocalPort(t *testing.T) {
 	g := Gateway{Upstream: upstream.Addr().String(), Auth: auth.ServerConfig{ServerPort: port, Secrets: auth.StaticSecrets{"client": secret}, ReplayCache: auth.NewMemoryReplayCache(time.Minute), KnockStore: store}, RemoveAfterAuth: true}
 	addr := netip.MustParseAddr("127.0.0.1")
 	store.Add(addr, "client", time.Minute, 1)
-	store.MarkFirewall(addr, port, time.Minute)
+	_, _ = store.MarkFirewall(addr, port, time.Minute)
 	done := make(chan struct{})
 	go func() {
 		conn, err := ln.Accept()
@@ -464,17 +467,19 @@ func TestKnockSessionStoreEvictsOldestAtLimit(t *testing.T) {
 	}
 }
 
-func TestKnockSessionStoreEvictsOldestFirewallLeaseAtLimit(t *testing.T) {
+func TestKnockSessionStoreRejectsFirewallLeaseAtLimit(t *testing.T) {
 	store := NewKnockSessionStoreWithLimit(1)
 	first := netip.MustParseAddr("192.0.2.11")
 	second := netip.MustParseAddr("192.0.2.12")
-	firstID := store.MarkFirewall(first, 443, time.Minute)
-	secondID := store.MarkFirewall(second, 443, time.Minute)
-	if store.ExpireFirewall(first, 443, firstID, time.Now().Add(time.Hour)) {
-		t.Fatal("oldest firewall lease should have been evicted")
+	firstID, ok := store.MarkFirewall(first, 443, time.Minute)
+	if !ok {
+		t.Fatal("mark first firewall lease failed")
 	}
-	if !store.ExpireFirewall(second, 443, secondID, time.Now().Add(time.Hour)) {
-		t.Fatal("newest firewall lease missing")
+	if secondID, ok := store.MarkFirewall(second, 443, time.Minute); ok || secondID != 0 {
+		t.Fatalf("second firewall lease ok=%v id=%d, want rejection", ok, secondID)
+	}
+	if !store.ExpireFirewall(first, 443, firstID, time.Now().Add(time.Hour)) {
+		t.Fatal("active firewall lease was silently evicted")
 	}
 }
 

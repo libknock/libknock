@@ -15,7 +15,7 @@ It authenticates a compact binary frame after a TCP connection is established an
 
 ## Dependency model
 
-libknock uses Go modules as the primary dependency path. The main release archive intentionally does not include `vendor/`; builds from a source zip need network access, a populated local module cache, or an internal dependency mirror. Keep `go.work` and `go.work.sum`: they describe the multi-module workspace and are not vendored dependency source.
+libknock uses Go modules as the primary dependency path. The standard source archive is for normal Go module users. The companion `with-vendor` archive includes `vendor/`, `vendor/modules.txt`, `go.work`, and `go.work.sum` for offline review, reproducible local audit, LLM-assisted integration, and restricted CI. Use `go test -mod=vendor ./...` and `go vet -mod=vendor ./...` when validating the vendored archive.
 
 ## What it provides
 

@@ -1,6 +1,6 @@
 # Compatibility policy
 
-`libknock` v0.1.0-rc1 is a pre-release. The project keeps the common TCP authentication SDK surface small and documents advanced packages separately so future wire-format and platform work does not accidentally freeze too much API.
+`libknock` v0.1.x release candidates are pre-releases. The project keeps the common TCP authentication SDK surface small and documents advanced packages separately so future wire-format and platform work does not accidentally freeze too much API.
 
 ## Stable for the v0.1.x release-candidate line
 
@@ -24,7 +24,7 @@ The `protocol` package exposes low-level frame and envelope helpers for interope
 
 ## Platform and gateway packages
 
-`gate`, `relay`, `firewall`, `knock`, and `observability` are public but advanced packages. They are usable in v0.1.0-rc1, but some paths are platform-specific and need host validation:
+`gate`, `relay`, `firewall`, `knock`, and `observability` are public but advanced packages. They are usable in the v0.1.x release-candidate line, but some paths are platform-specific and need host validation:
 
 - raw packet and passive-capture knock methods;
 - TCP SYN / SYN-sequence methods;

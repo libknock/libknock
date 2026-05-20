@@ -384,6 +384,14 @@ func (g *Gate) knockHandler(ctx context.Context, ln net.Listener) knock.Handler 
 		uses := g.cfg.MaxConnectionsPerKnock
 		storeClientID := ev.ClientID
 		sessionID := ev.SessionID
+		leaseID, ok := g.store.MarkFirewall(remote, port, ttl)
+		if !ok {
+			if gatewaycore.ShouldManualRevoke(fw) {
+				_ = gatewaycore.RevokeFirewall(ctx, fw, remote, port, g.cfg.Events)
+			}
+			gatewaycore.EventEmitter{Sink: g.cfg.Events}.KnockFail(observability.KnockFailEvent{Remote: remote, ClientID: ev.ClientID, Reason: "firewall_lease_store_full"})
+			return
+		}
 		if g.cfg.Mode == KnockFirewallOnly {
 			storeClientID = firewallOnlyClientID
 			sessionID = nil
@@ -391,7 +399,6 @@ func (g *Gate) knockHandler(ctx context.Context, ln net.Listener) knock.Handler 
 		} else {
 			g.store.AddSessionForPort(remote, storeClientID, sessionID, port, ttl, uses)
 		}
-		leaseID := g.store.MarkFirewall(remote, port, ttl)
 		gatewaycore.EventEmitter{Sink: g.cfg.Events}.KnockOK(observability.KnockEvent{Remote: remote, ClientID: ev.ClientID, Method: ev.Method, Parts: ev.Parts, TTL: ttl})
 		g.timers.AfterFunc(ttl, func() {
 			g.store.Expire(remote, storeClientID, time.Now())

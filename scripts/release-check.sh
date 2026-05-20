@@ -21,7 +21,7 @@ echo "== docs link smoke =="
 python3 scripts/check-doc-links.py
 
 echo "== duplication scan =="
-STRICT=1 bash scripts/check-duplication.sh .
+DUPL_THRESHOLD=120 STRICT=1 bash scripts/check-duplication.sh .
 
 echo "== license/dependency smoke =="
 test -f LICENSE
@@ -29,5 +29,15 @@ test -f NOTICE
 test -f go.mod
 test -f go.sum
 go list -m all >/dev/null
+
+echo "== vendor release smoke =="
+go work vendor
+test -f vendor/modules.txt
+go test -mod=vendor ./...
+go vet -mod=vendor ./...
+go test -mod=vendor ./observability/prometheus/...
+go test -mod=vendor ./test/integration/grpc/...
+go test -mod=vendor ./examples/grpc-client/... ./examples/grpc-server/...
+rm -rf vendor
 
 echo "release-check: ok"

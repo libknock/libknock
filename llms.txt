@@ -20,3 +20,33 @@ Do not:
 - Create per-connection replay caches.
 - Put config-file parsing in SDK core.
 - Treat auth-only or knock-auth-only as port hiding.
+
+
+File map:
+- Stable root API: aliases.go, auth/types.go, netx/listener.go, netx/dialer.go
+- Normal integration entry points: docs/getting-started.md, docs/api.md, docs/api-surface.md, examples/
+- Mode implementation: gate/, relay/, firewall/, knock/
+- Wire/internal implementation: protocol/, internal/
+- Docs to update when API changes: README.md, docs/api.md, docs/api-surface.md, COMPATIBILITY.md, docs/zh-cn/api.md
+
+Stable root API:
+- aliases.go
+- auth/types.go
+- netx/listener.go
+- netx/dialer.go
+
+Normal integration should not start from:
+- protocol/
+- internal/
+
+Mode implementation:
+- gate/
+- relay/
+- firewall/
+
+Docs to update when API changes:
+- README.md
+- docs/api.md
+- docs/api-surface.md
+- COMPATIBILITY.md
+- docs/zh-cn/api.md

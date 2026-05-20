@@ -10,13 +10,13 @@ import (
 var benchKnockSecret = []byte("0123456789abcdef0123456789abcdef")
 
 func BenchmarkKnockFrameBuildOpen(b *testing.B) {
-	frame, err := BuildKnockFrame(KnockFrameOptions{ClientID: "client", Secret: benchKnockSecret, ServerPort: 443, Method: UDPMethod, SessionID: []byte("session-id-0001!")})
-	if err != nil {
-		b.Fatal(err)
-	}
-	cfg := ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: benchKnockSecret}}, ServerPort: 443, Method: UDPMethod}
+	cfg := ServerConfig{Clients: []ClientSecret{{ClientID: "client", Secret: benchKnockSecret}}, ServerPort: 443, Method: UDPMethod, ReplayCache: auth.NewMemoryReplayCacheWithLimit(time.Minute, b.N+1)}
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
+		frame, err := BuildKnockFrame(KnockFrameOptions{ClientID: "client", Secret: benchKnockSecret, ServerPort: 443, Method: UDPMethod, SessionID: []byte("session-id-0001!")})
+		if err != nil {
+			b.Fatal(err)
+		}
 		if _, err := OpenKnockFrame(frame, cfg); err != nil {
 			b.Fatal(err)
 		}

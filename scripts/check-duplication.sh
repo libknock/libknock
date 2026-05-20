@@ -26,7 +26,7 @@ check_single 'func acceptsProtocol' acceptsProtocol
 check_single 'func acceptsAuthProtocol' acceptsAuthProtocol
 
 if command -v dupl >/dev/null 2>&1; then
-  dupl -threshold 80 -vendor=false "$root" || status=$?
+  dupl -threshold "${DUPL_THRESHOLD:-80}" -vendor=false "$root" || status=$?
 else
   if [ "${STRICT:-0}" = "1" ]; then
     echo "error: dupl not found; install with: go install github.com/mibk/dupl@latest" >&2

@@ -111,7 +111,7 @@ Important fields:
 - `MaxAuthAttempts`: maximum envelope v2 candidate/bucket AEAD attempts per connection. Default: `64`.
 - `Events`: receives authentication events.
 - `Policy`: optional limiter/ban hook.
-- `OnAuthenticated`: callback invoked after successful authentication.
+- `OnAuthenticated`: callback invoked after successful authentication. It is called synchronously, must return quickly, and must not perform blocking I/O; start your own goroutine for asynchronous work.
 
 ## ClientConfig
 

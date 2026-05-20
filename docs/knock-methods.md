@@ -98,6 +98,7 @@ type ListenOptions struct {
     RequireSessionID bool
     ReplayCache      auth.ReplayCache
     AllowPacket      func(net.IP) bool
+    PacketLimiter    PacketLimiter
     InvalidPacket    func(net.IP, string)
     Sequence         SequenceOptions
     NonceTTL         time.Duration
@@ -129,7 +130,7 @@ type SendOptions struct {
 | TCP SYN-shaped knock path | `tcp-syn` |
 | Multi-part TCP SYN-shaped admission | `tcp-syn-seq` |
 
-Start with `udp` unless a deployment has a specific reason to use another method.
+Start with `udp` unless a deployment has a specific reason to use another method. `PacketLimiter` runs before AEAD opening on active UDP listeners; enable a per-source-IP limiter for Internet-facing UDP knock ports to keep floods from forcing candidate-secret work.
 
 ## Gate and relay support matrix
 

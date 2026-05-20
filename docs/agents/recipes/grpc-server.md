@@ -1,19 +1,36 @@
 # grpc-server recipe
 
-## Use when
+## Applicable scenario
 
-Use this recipe for the integration shape named `grpc-server`.
+gRPC servers that own their listener.
 
-## Do not use when
+## Files to modify
 
-Do not use it to bypass the root SDK APIs or to move application configuration parsing into SDK core.
+- examples/grpc-server/main.go, test/integration/grpc/examples/grpc-server/main.go, docs/agents/integration-guide.md
+- Update docs/tests next to the changed API or example.
 
-## Validation
+## Files not to modify
 
-Run `scripts/check-integration.sh` and the relevant example or integration test.
+- protocol/, internal/
+- Do not create per-connection replay caches.
+- Do not move application-specific config parsing into SDK core.
+
+## Minimal shape
+
+```text
+create `net.Listener`, wrap with `libknock.NewListener`, then call `grpcServer.Serve(protected)`
+```
 
 ## Common mistakes
 
 - Creating a replay cache per connection.
-- Importing `protocol/` for normal application integration.
-- Claiming libknock replaces TLS or application authorization.
+- Importing `protocol/` or `internal/` for normal application integration.
+- Claiming libknock replaces TLS, mTLS, SSH, WireGuard, or application authorization.
+- Skipping docs/api.md, docs/api-surface.md, README.md, and COMPATIBILITY.md when API behavior changes.
+
+## Validation commands
+
+```sh
+`go test ./test/integration/grpc/... && go build ./examples/grpc-server`
+scripts/check-integration.sh
+```

@@ -59,7 +59,10 @@ type ServerConfig struct {
 	MaxAuthAttempts    int
 	Events             EventSink
 	Policy             Policy
-	OnAuthenticated    AuthenticatedCallback
+	// OnAuthenticated is called synchronously after successful authentication.
+	// It must return quickly and must not perform blocking I/O; start your own
+	// goroutine if asynchronous post-auth processing is needed.
+	OnAuthenticated AuthenticatedCallback
 }
 
 type ClientConfig struct {
@@ -286,19 +289,13 @@ func (c ClientConfig) ValidateRuntime() error {
 
 func ValidateClientAuthConfig(c ClientConfig) error { return c.ValidateRuntime() }
 
-type protocolSet map[AuthProtocol]struct{}
-
-func newProtocolSet(list []AuthProtocol) protocolSet {
-	out := make(protocolSet, len(list))
-	for _, p := range list {
-		out[p] = struct{}{}
-	}
-	return out
-}
-
 func acceptsProtocol(list []AuthProtocol, p AuthProtocol) bool {
-	_, ok := newProtocolSet(list)[p]
-	return ok
+	for _, v := range list {
+		if v == p {
+			return true
+		}
+	}
+	return false
 }
 
 func (c ServerConfig) WithDefaults() ServerConfig {

@@ -61,5 +61,7 @@ func closeWrite(conn net.Conn) {
 func closeRead(conn net.Conn) {
 	if c, ok := conn.(interface{ CloseRead() error }); ok {
 		_ = c.CloseRead()
+		return
 	}
+	_ = conn.Close()
 }

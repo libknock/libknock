@@ -11,7 +11,7 @@ scripts/check.sh
 go test -count=1 ./...
 go vet ./...
 go build ./...
-go test -race -count=1 ./auth ./firewall ./knock ./netx ./policy ./protocol ./relay
+go test -race -count=1 ./auth ./firewall ./gate ./knock ./netx ./policy ./protocol ./relay
 ```
 
 ## 2. 嵌套模块
@@ -144,13 +144,6 @@ done
 - 存在 `docs/`
 - 存在模块文件
 
-对于仅文档 overlay 归档：
-
-- `README.md` 位于归档根目录
-- `docs/` 位于归档根目录
-- 无源文件
-- 无 vendor 文件
-- 无生成的二进制文件
 
 ## 11. 发布决策
 

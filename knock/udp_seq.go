@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/libknock/libknock/auth"
+	"github.com/libknock/libknock/internal/cache"
 )
 
 type seqState struct {
@@ -27,7 +28,7 @@ type sequenceTracker struct {
 	states    map[string]*seqState
 	perIP     map[string]int
 	total     int
-	completed map[string]time.Time
+	completed *cache.TTLLRU[string, struct{}]
 	nonceTT   time.Duration
 }
 
@@ -36,7 +37,7 @@ func newSequenceTracker(opts SequenceOptions, nonceTTL time.Duration) *sequenceT
 	if nonceTTL <= opts.Window {
 		nonceTTL = 2 * time.Minute
 	}
-	return &sequenceTracker{opts: opts, states: map[string]*seqState{}, perIP: map[string]int{}, completed: map[string]time.Time{}, nonceTT: nonceTTL}
+	return &sequenceTracker{opts: opts, states: map[string]*seqState{}, perIP: map[string]int{}, completed: cache.NewTTLLRU[string, struct{}](opts.MaxTotalInflight), nonceTT: nonceTTL}
 }
 
 func SendUDPSequence(ctx context.Context, opts SendOptions) error {
@@ -136,7 +137,7 @@ func (l *udpSequenceListener) Serve(ctx context.Context, handler Handler) error 
 		if !ok || udpAddr.IP == nil {
 			continue
 		}
-		if opts.AllowPacket != nil && !opts.AllowPacket(udpAddr.IP) {
+		if !allowKnockPacket(opts, udpAddr.IP) {
 			continue
 		}
 		info, err := OpenKnockFrame(buf[:n], ServerConfig{Clients: opts.Clients, ServerPort: opts.Port, Method: UDPSeqMethod, TimeWindow: opts.TimeWindow, MaxFrameSize: maxFrameSize, ReplayCache: replay, AllowSequence: true})
@@ -184,7 +185,7 @@ func (t *sequenceTracker) add(src net.IP, info *KnockInfo, now time.Time) (bool,
 		return false, fmt.Errorf("invalid udp sequence index or total")
 	}
 	key := sequenceStateKey(src, info)
-	if expires, ok := t.completed[key]; ok && expires.After(now) {
+	if _, ok := t.completed.GetAt(key, now); ok {
 		return false, auth.ErrReplayDetected
 	}
 	state := t.states[key]
@@ -217,7 +218,7 @@ func (t *sequenceTracker) add(src net.IP, info *KnockInfo, now time.Time) (bool,
 			return false, nil
 		}
 	}
-	t.completed[key] = now.Add(t.nonceTT)
+	t.markCompletedLocked(key, now)
 	t.removeLocked(key, src.String())
 	return true, nil
 }
@@ -231,15 +232,20 @@ func (t *sequenceTracker) pruneLocked(now time.Time) {
 		if now.Sub(state.firstSeen) > t.opts.Window {
 			parts := splitStateKey(key)
 			if len(parts) > 0 {
-				t.completed[key] = now.Add(t.nonceTT)
+				t.markCompletedLocked(key, now)
 				t.removeLocked(key, parts[0])
 			}
 		}
 	}
-	for key, expires := range t.completed {
-		if !expires.After(now) {
-			delete(t.completed, key)
-		}
+	t.completed.Sweep(now)
+}
+
+func (t *sequenceTracker) markCompletedLocked(key string, now time.Time) {
+	if t.completed.ActiveLen(now) >= t.opts.MaxTotalInflight {
+		t.completed.Sweep(now)
+	}
+	if t.completed.ActiveLen(now) < t.opts.MaxTotalInflight {
+		t.completed.SetUntil(key, struct{}{}, now.Add(t.nonceTT))
 	}
 }
 

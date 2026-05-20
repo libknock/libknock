@@ -26,3 +26,8 @@ Stable root APIs are documented in `docs/api-surface.md` and `COMPATIBILITY.md`.
 ## Required completion report
 
 State files changed, why, validation commands run, environment-limited tests not run, public API impact, and whether English/Chinese docs stayed synchronized.
+
+
+## Authentication callbacks
+
+`OnAuthenticated` is called synchronously on the auth path. The callback must return quickly and must not perform blocking I/O. If asynchronous processing is needed, start a goroutine from the callback and manage its lifetime explicitly.

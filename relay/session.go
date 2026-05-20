@@ -32,8 +32,7 @@ type session struct {
 }
 
 type firewallLease struct {
-	id      uint64
-	expires time.Time
+	id uint64
 }
 
 func NewKnockSessionStore() *KnockSessionStore {
@@ -155,17 +154,28 @@ func (s *KnockSessionStore) ExpireForPort(remote netip.Addr, clientID string, po
 func (s *KnockSessionStore) removeSessionsLocked(remote netip.Addr, clientID string) int {
 	return s.sessions.DeleteWhere(func(entry cache.Entry[string, *session]) bool { return sessionKeyMatches(entry.Key, remote, clientID) })
 }
-func (s *KnockSessionStore) MarkFirewall(remote netip.Addr, port int, ttl time.Duration) uint64 {
-	if s == nil || !remote.IsValid() || port <= 0 {
-		return 0
+func (s *KnockSessionStore) MarkFirewall(remote netip.Addr, port int, ttl time.Duration) (uint64, bool) {
+	if s == nil || !remote.IsValid() || port <= 0 || ttl <= 0 {
+		return 0, false
 	}
 	now := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.firewall.Sweep(now)
+	key := firewallKey(remote, port)
+	if entry, ok := s.firewall.Peek(key); ok && entry.ExpiresAt.After(now) {
+		s.nextID++
+		id := s.nextID
+		s.firewall.SetUntil(key, &firewallLease{id: id}, now.Add(ttl))
+		return id, true
+	}
+	if s.firewall.ActiveLen(now) >= s.firewall.Cap() {
+		return 0, false
+	}
 	s.nextID++
 	id := s.nextID
-	s.firewall.SetUntil(firewallKey(remote, port), &firewallLease{id: id}, now.Add(ttl))
-	return id
+	s.firewall.SetUntil(key, &firewallLease{id: id}, now.Add(ttl))
+	return id, true
 }
 func (s *KnockSessionStore) ExpireFirewall(remote netip.Addr, port int, id uint64, now time.Time) bool {
 	if s == nil || id == 0 {
