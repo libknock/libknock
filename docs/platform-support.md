@@ -9,8 +9,11 @@ Status values:
 
 | Platform | Auth-only TCP SDK | Relay | UDP knock | UDP passive | TCP SYN knock | TCP SYN sequence | Firewall backend |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Linux | stable | stable | stable | experimental | experimental | experimental | experimental: nftables, ipset-iptables, iptables; manual validation required |
+| Linux | stable | stable | stable | experimental | experimental | experimental | experimental: nftables, ipset-iptables, iptables; not validated on real host |
 | Windows | stable | stable | stable | compile-only / driver-dependent | compile-only / WinDivert or Npcap required | compile-only / WinDivert or Npcap required | not supported by built-in firewall backends |
 | macOS | stable | stable | stable | compile-only / BPF or pcap required | compile-only / BPF or pcap required | compile-only / BPF or pcap required | not supported by built-in firewall backends |
 
-`stable` here means the library path is stable, not that every host topology has been hardware validated. See [Validation matrix](validation-matrix.md), [Known limitations](known-limitations.md), and [Validation template](validation-template.md) before claiming a deployment is verified.
+`stable` here means the library/API path is stable, not that every host topology has been validated on a real host. See [Validation matrix](validation-matrix.md), [Known limitations](known-limitations.md), and [Validation template](validation-template.md) before claiming a deployment is verified.
+
+
+Evidence levels are documented separately in the validation matrix. Treat active UDP as the cross-platform baseline; TCP SYN, passive capture, Linux firewall mutation, Windows driver paths, and macOS BPF/pcap paths are platform-specific until validated on the target host.

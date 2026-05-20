@@ -26,7 +26,7 @@ The `protocol` package exposes low-level frame and envelope helpers for interope
 
 ## Platform and gateway packages
 
-`gate`, `relay`, `firewall`, `knock`, and `observability` are public but advanced packages. They are usable in the v0.1.x release-candidate line, but some paths are platform-specific and need host validation:
+`gate`, `relay`, `firewall`, `knock`, and `observability` are public but advanced/experimental packages. They are usable in the v0.1.x release-candidate line, but some paths are platform-specific and need host validation:
 
 - raw packet and passive-capture knock methods;
 - TCP SYN / SYN-sequence methods;

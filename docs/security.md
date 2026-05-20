@@ -7,7 +7,7 @@
 - It does not replace TLS, mTLS, SSH, WireGuard, or business authorization.
 - It does not encrypt application bytes after authentication; the returned `net.Conn` is the caller's normal stream.
 - It authenticates before the application protocol starts and preserves any bytes over-read during auth.
-- Firewall-backed modes depend on the selected backend and host policy. Repository dry-run tests are not hardware validation.
+- Firewall-backed modes depend on the selected backend and host policy. Repository dry-run tests are not real-host validation.
 
 ## Failure handling
 
@@ -23,6 +23,18 @@
 - `KnockNonceTTL` / knock replay caches reject duplicate knock frames.
 - Knock session TTL and `MaxConnectionsPerKnock` bind a successful knock to later TCP auth attempts when session binding is enabled.
 - Active UDP knock listeners can use `ListenOptions.PacketLimiter` to reject packets by source IP before AEAD opening. Enable this for public UDP knock ports so floods do not force candidate-secret work.
+
+## Log and event redaction checklist
+
+Before adding event fields, log lines, metrics labels, or debug output, audit failure and success paths for:
+
+- no raw shared secrets;
+- no full auth frames or UDP knock frames;
+- no sealed payload bytes;
+- no unbounded peer-controlled error strings;
+- no complete raw packet captures.
+
+Prefer bounded enums such as `method`, `mode`, `reason`, and `stage`, and stable metadata such as source address, protected port, duration, and byte counts.
 
 ## Secrets
 

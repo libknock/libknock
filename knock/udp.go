@@ -11,6 +11,7 @@ import (
 func SendUDP(ctx context.Context, opts SendOptions) error { return SendUDPMethod(ctx, opts, "udp") }
 
 func SendUDPMethod(ctx context.Context, opts SendOptions, method string) error {
+	ctx = backgroundIfNil(ctx)
 	if opts.TimeWindow <= 0 {
 		opts.TimeWindow = 30 * time.Second
 	}
@@ -58,9 +59,7 @@ func (l *udpListener) Close() error   { return l.conn.Close() }
 func (l *udpListener) Addr() net.Addr { return l.conn.LocalAddr() }
 
 func (l *udpListener) Serve(ctx context.Context, handler Handler) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
+	ctx = backgroundIfNil(ctx)
 	defer l.Close()
 	go func() { <-ctx.Done(); _ = l.Close() }()
 	opts := l.opts

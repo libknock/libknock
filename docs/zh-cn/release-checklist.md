@@ -153,7 +153,7 @@ done
 最小归档审计命令：
 
 ```sh
-version=v0.1.0-rc2.5
+version=v0.1.0-rc2.6
 zipinfo -1 "dist/libknock-${version}.zip" | grep -Ev "^libknock-${version}/" && exit 1 || true
 zipinfo -1 "dist/libknock-${version}.zip" | grep -E "(^/|(^|/)\.\./)" && exit 1 || true
 zipinfo -1 "dist/libknock-${version}.zip" | grep -q "^libknock-${version}/vendor/" && exit 1 || true

@@ -94,6 +94,15 @@ AAD rationale:
 - `route_hint` is authenticated when present so a sealed envelope cannot be moved between resolver buckets.
 - `bucket_size` is authenticated so padding cannot be stripped or expanded without AEAD failure.
 - `bucket_size` must not exceed the server `MaxFrameSize`. Tightening `ServerConfig.MaxFrameSize` requires tightening client `EnvelopeV2.FrameSizeBuckets` as well; a client that can randomly choose `384` or `512` will fail against a server capped at `256`.
+
+Server/client sizing example:
+
+```go
+serverCfg.MaxFrameSize = 256
+clientCfg.EnvelopeV2.FrameSizeBuckets = []int{128, 192, 256}
+```
+
+Do not deploy `FrameSizeBuckets: []int{128, 192, 256, 384, 512}` against a server capped at `256`; some otherwise valid authentication attempts will be rejected whenever the client chooses a larger bucket.
 - `server_port` is authenticated for NAT and forwarding deployments where the socket port can differ from the protected service port.
 - `tcp-auth-envelope-v2` domain-separates the envelope from other libknock AEAD uses.
 
@@ -134,6 +143,10 @@ serverCfg.AcceptProtocols = []auth.AuthProtocol{
 ```
 
 Keep client and server protocol settings aligned during rollout and test every accepted protocol path in CI.
+
+## TCP SYN sequence namespace
+
+The default SYN sequence namespace is `libknock/tcp-syn-seq/v1`. The legacy `knock-proxy/tcp-syn-seq/v1` namespace is retained only as an explicit compatibility layer through `SequenceOptions.AllowLegacySYNSeq`; it is not part of the default verification surface for new SDK deployments. Migration guidance should keep this compatibility flag visible instead of silently accepting old wire material.
 
 ## UDP knock frame v1
 

@@ -15,6 +15,7 @@ const (
 )
 
 func SendMethod(ctx context.Context, method string, opts SendOptions) error {
+	ctx = backgroundIfNil(ctx)
 	method = NormalizeMethod(method)
 	switch method {
 	case UDPMethod:

@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.1.0-rc2.6 - 2026-05-20
+
+### Release scope
+
+- Normalized low-level `knock` public entrypoints to accept a nil `context.Context` consistently with auth/netx/gate/relay APIs. Nil contexts are converted to `context.Background()` before dialing, raw socket send, BPF/AF_PACKET listeners, UDP listeners, and sequence sleeps.
+- Removed an unused firewall command helper and kept command detection on the Runner-aware path used by backend detection and diagnostics.
+- Aligned nested gRPC example and integration modules plus the optional Prometheus module on `github.com/libknock/libknock v0.1.0-rc2.6` while preserving local `replace` directives.
+- Kept release checks focused on project-owned Go files, representative examples, API snapshot, vendored archive validation, docs links, fuzz smoke, benchmark smoke, and maintainer duplication checks.
+
+### Validation status
+
+- Automated gates cover unit/integration tests, selected race tests, vet/build, docs links, API surface snapshot, short fuzz smoke, benchmark smoke, duplication scan, vendored archive checks, nested modules, and representative examples.
+- This pre-release still does not claim real-host validation for nftables, ipset-iptables, iptables fallback, UDP passive with `drop_udp_knock_port`, TCP SYN paths, Windows WinDivert/Npcap paths, macOS BPF/pcap paths, long fuzz campaigns, or production performance baselines. Use `docs/validation-template.md` before making deployment-specific production claims.
+
 ## v0.1.0-rc2.5 - 2026-05-20
 
 ### Release scope

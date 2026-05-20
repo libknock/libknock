@@ -10,6 +10,7 @@ import (
 )
 
 func ListenUDPPassive(ctx context.Context, opts ListenOptions, handler Handler) error {
+	ctx = backgroundIfNil(ctx)
 	if opts.TimeWindow <= 0 {
 		opts.TimeWindow = 30 * time.Second
 	}
@@ -48,6 +49,7 @@ func ListenUDPPassive(ctx context.Context, opts ListenOptions, handler Handler) 
 }
 
 func ListenUDPPassiveSequence(ctx context.Context, opts ListenOptions, handler Handler) error {
+	ctx = backgroundIfNil(ctx)
 	if opts.Port < 1 || opts.Port > 65535 {
 		return fmt.Errorf("invalid protected port %d", opts.Port)
 	}

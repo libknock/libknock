@@ -372,8 +372,6 @@ func validateFirewallObjectName(label, value string) error {
 	return nil
 }
 
-func commandExists(name string) bool { _, err := exec.LookPath(name); return err == nil }
-
 func firewallCommandExists(cfg Config, name string) bool {
 	_, ok := firewallCommandPath(cfg, name)
 	return ok

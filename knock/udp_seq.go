@@ -45,6 +45,7 @@ func SendUDPSequence(ctx context.Context, opts SendOptions) error {
 }
 
 func SendUDPSequenceMethod(ctx context.Context, opts SendOptions, method string) error {
+	ctx = backgroundIfNil(ctx)
 	if method == "" {
 		method = UDPSeqMethod
 	}
@@ -115,9 +116,7 @@ func (l *udpSequenceListener) Close() error   { return l.conn.Close() }
 func (l *udpSequenceListener) Addr() net.Addr { return l.conn.LocalAddr() }
 
 func (l *udpSequenceListener) Serve(ctx context.Context, handler Handler) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
+	ctx = backgroundIfNil(ctx)
 	defer l.Close()
 	go func() { <-ctx.Done(); _ = l.Close() }()
 	opts := l.opts
@@ -283,6 +282,7 @@ func jitter(max time.Duration) time.Duration {
 }
 
 func sleepSequenceInterval(ctx context.Context, index, total int, seq SequenceOptions) error {
+	ctx = backgroundIfNil(ctx)
 	if index+1 >= total {
 		return nil
 	}

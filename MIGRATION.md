@@ -64,3 +64,7 @@ Keep service configs versioned. To roll back a deployment, stop the current runt
 - Replay caches fail closed when full. Operators should size replay caches for expected concurrent windows and alert on `ErrReplayCacheFull`; the cache will not evict still-valid nonces.
 - `knock.OpenKnockFrame` now requires `ServerConfig.ReplayCache`. Use the high-level UDP/passive/sequence listeners for default replay-cache ownership, or use `ParseKnockFrameUnsafe` only for offline diagnostics.
 - Limiters reject new keys when all buckets are active and `maxEntries` is reached. Increase `maxEntries` for legitimate high-cardinality traffic rather than relying on LRU eviction.
+
+## Legacy TCP SYN sequence compatibility
+
+New deployments use the `libknock/tcp-syn-seq/v1` namespace. The older `knock-proxy/tcp-syn-seq/v1` namespace remains available only when `SequenceOptions.AllowLegacySYNSeq` is set. Enable it for controlled migration windows, then remove it after all clients have switched to the libknock namespace.

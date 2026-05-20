@@ -6,11 +6,25 @@ This page records the current engineering boundaries of libknock. It is intentio
 
 Current automated validation covers Go unit tests, selected race tests, fuzz targets, protocol compatibility tests, dry-run firewall command checks, and local loopback integration paths. It does not prove behavior on every host firewall, packet capture driver, kernel version, NAT topology, or production network.
 
+
+## Centralized not-validated list
+
+The following areas are intentionally tracked as `not validated on real host` for this release round unless a completed `docs/validation-template.md` record says otherwise:
+
+- Linux `nftables`, `ipset-iptables`, and `iptables` fallback rule creation, revoke, cleanup, repeated startup cleanup, and abnormal-exit stale-rule recovery.
+- Linux firewall IPv4/IPv6 behavior across host distributions, containers, namespaces, NAT, and existing firewall policy order.
+- UDP passive capture with `drop_udp_knock_port`, including root/CAP_NET_RAW/pcap/BPF privileges and firewall DROP interaction.
+- TCP SYN and TCP SYN sequence raw-packet send/listen paths.
+- Windows WinDivert/Npcap and macOS BPF/pcap runtime behavior.
+- Long-running fuzz campaigns and production performance baselines.
+
+Repository unit tests, mock runner tests, dry-run scripts, build checks, and short fuzz/benchmark smoke are useful code-level evidence, but they are not real-host validation.
+
 ## Platform firewall backends
 
 - Linux nftables, iptables, and ipset command generation is covered by tests and validation scripts, but still needs host-level validation on real distributions and firewall configurations.
-- Windows support depends on the intended backend and host privileges. WinDivert/Npcap-style packet handling is platform-specific and not currently hardware validated in this repository.
-- macOS passive capture paths depend on BPF/pcap privileges and host networking behavior. They are not currently hardware validated here.
+- Windows support depends on the intended backend and host privileges. WinDivert/Npcap-style packet handling is platform-specific and not validated on real host in this repository.
+- macOS passive capture paths depend on BPF/pcap privileges and host networking behavior. They are not validated on real host here.
 - Firewall cleanup is designed to be idempotent, but operators should still run staged validation on the target host before exposing a service.
 
 ## Knock methods

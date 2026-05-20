@@ -18,6 +18,7 @@ import (
 const bpfReadBufferLen = 65535
 
 func Send(ctx context.Context, opts SendOptions) error {
+	ctx = backgroundIfNil(ctx)
 	if err := ValidateSendOptions(opts); err != nil {
 		return err
 	}
@@ -38,6 +39,7 @@ func Send(ctx context.Context, opts SendOptions) error {
 }
 
 func SendSYNSequence(ctx context.Context, opts SendOptions) error {
+	ctx = backgroundIfNil(ctx)
 	if err := ValidateSendOptions(opts); err != nil {
 		return err
 	}
@@ -188,6 +190,7 @@ func darwinSendSYNSequenceIPv6(ctx context.Context, opts SendOptions, remote *ne
 }
 
 func Listen(ctx context.Context, opts ListenOptions, handler Handler) error {
+	ctx = backgroundIfNil(ctx)
 	if err := ValidateClientSecrets(opts.Clients); err != nil {
 		return err
 	}
@@ -218,6 +221,7 @@ func Listen(ctx context.Context, opts ListenOptions, handler Handler) error {
 }
 
 func ListenSYNSequence(ctx context.Context, opts ListenOptions, handler Handler) error {
+	ctx = backgroundIfNil(ctx)
 	if err := ValidateClientSecrets(opts.Clients); err != nil {
 		return err
 	}
@@ -249,6 +253,7 @@ func CheckServerPrivileges() error {
 }
 
 func darwinListenBPF(ctx context.Context, onFrame func([]byte)) error {
+	ctx = backgroundIfNil(ctx)
 	fd, err := openBPFDevice()
 	if err != nil {
 		return err
@@ -357,6 +362,7 @@ func readableBPFDeviceExists() bool {
 }
 
 func sendSockaddr(ctx context.Context, fd int, packet []byte, addr unix.Sockaddr) error {
+	ctx = backgroundIfNil(ctx)
 	errCh := make(chan error, 1)
 	go func() { errCh <- unix.Sendto(fd, packet, 0, addr) }()
 	select {

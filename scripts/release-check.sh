@@ -9,6 +9,11 @@ bash scripts/check.sh
 echo "== build main module =="
 go build ./...
 
+echo "== example builds =="
+go build ./examples/tcp-echo-client ./examples/tcp-echo-server
+go build ./examples/tls-client ./examples/tls-server
+go build ./examples/custom-binary-protocol/client ./examples/custom-binary-protocol/server
+
 echo "== short fuzz smoke =="
 go test ./protocol -run=^$ -fuzz=FuzzEnvelopeV2Open -fuzztime=20s -parallel=1 -timeout=60s
 go test ./knock -run=^$ -fuzz=FuzzOpenKnockFrame -fuzztime=20s -parallel=1 -timeout=60s
@@ -45,6 +50,7 @@ cp -a .git "$tmpdir/.git"
   go test -mod=vendor ./observability/prometheus/...
   go test -mod=vendor ./test/integration/grpc/...
   go test -mod=vendor ./examples/grpc-client/... ./examples/grpc-server/...
+  go build -mod=vendor ./examples/tcp-echo-client ./examples/tcp-echo-server ./examples/tls-client ./examples/tls-server ./examples/custom-binary-protocol/client ./examples/custom-binary-protocol/server
 )
 
 echo "release-check: ok"

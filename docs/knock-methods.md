@@ -60,9 +60,18 @@ Use `udp` when a single authenticated datagram is enough. Use `udp-seq` when the
 
 ## UDP passive methods
 
-`udp-passive` and `udp-passive-seq` read UDP knock traffic through packet capture on the server side instead of a normal UDP listener. These modes require packet capture privileges on the server platform.
+`udp-passive` and `udp-passive-seq` read UDP knock traffic through packet capture on the server side instead of a normal UDP listener. These modes require packet capture privileges on the server platform. Passive UDP is not proven by unit tests alone. It needs root, `CAP_NET_RAW`, or platform-specific pcap/BPF permissions, a capture-capable network interface, and—when `DropUDPKnockPort` is enabled—a firewall backend that can DROP the UDP knock port without preventing packet capture.
 
 Use passive UDP only when the deployment can provide the required platform capability and firewall configuration. See [Firewall backends](firewall.md) and [Production deployment](production.md) for lifecycle and capability notes.
+
+Passive UDP validation checklist:
+
+1. Run the listener with the intended privileges on the target host.
+2. Verify the selected interface captures remote UDP knock datagrams.
+3. If `DropUDPKnockPort` is enabled, verify the firewall DROP rule exists and packet capture still observes the knock.
+4. Confirm a valid knock creates the intended admission session/firewall allow entry.
+5. Confirm invalid packets do not create sessions, replay entries, or allow rules.
+6. Stop the service and confirm UDP DROP and temporary TCP allow rules are cleaned.
 
 ## TCP SYN methods
 

@@ -57,7 +57,7 @@ Use `auth` when an integration needs protocol selectors, custom secret resolutio
 
 ## Platform packages
 
-`knock`, `firewall`, `gate`, `relay`, and `observability` are public advanced packages. Raw packet, passive-capture, SYN, and host firewall paths require target-host validation as documented in the validation matrix and known limitations.
+`knock`, `firewall`, `gate`, `relay`, and `observability` are public advanced/experimental packages. Raw packet, passive-capture, SYN, and host firewall paths require target-host validation as documented in the validation matrix and known limitations.
 
 Coding agents should not treat these packages as the default integration surface. Start from the root package or `auth` unless the task explicitly involves knock methods, firewall mutation, gate composition, relay compatibility, or observability adapters. Do not add application config parsing, long-running service orchestration, or product-specific policy to SDK core packages.
 

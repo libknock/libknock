@@ -80,6 +80,7 @@ func New(cfg Config) (*Sink, error) {
 func MustNew(cfg Config) *Sink {
 	s, err := New(cfg)
 	if err != nil {
+		// Prometheus descriptor/registration failures are configuration bugs in the metrics surface; the Must variant preserves fail-fast startup semantics.
 		panic(err)
 	}
 	return s

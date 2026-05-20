@@ -12,6 +12,7 @@ import (
 )
 
 func Send(ctx context.Context, opts SendOptions) error {
+	ctx = backgroundIfNil(ctx)
 	if err := ValidateSendOptions(opts); err != nil {
 		return err
 	}
@@ -64,6 +65,7 @@ func Send(ctx context.Context, opts SendOptions) error {
 }
 
 func SendSYNSequence(ctx context.Context, opts SendOptions) error {
+	ctx = backgroundIfNil(ctx)
 	if err := ValidateSendOptions(opts); err != nil {
 		return err
 	}
@@ -122,6 +124,7 @@ func SendSYNSequence(ctx context.Context, opts SendOptions) error {
 }
 
 func windowsSendSYNSequenceWinDivert(ctx context.Context, localIP, remoteIP net.IP, parts []SYNSeqPart, seq SequenceOptions) error {
+	ctx = backgroundIfNil(ctx)
 	for i, part := range parts {
 		srcPort, err := randomEphemeralPort()
 		if err != nil {

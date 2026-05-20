@@ -15,6 +15,9 @@ type Backend interface {
 }
 ```
 
+
+Repository validation for Linux firewall backends is currently code-level and dry-run oriented. It covers backend construction, command generation, mock/fake runner behavior, cleanup shape, idempotency paths, and error propagation. It does not prove real rule creation, revoke, cleanup, packet filtering, IPv4/IPv6 behavior, repeated startup cleanup of stale rules, or abnormal-exit recovery on a target host. Treat `nftables`, `ipset-iptables`, and `iptables` fallback as `not validated on real host` until recorded with `docs/validation-template.md`.
+
 ## Built-in backends
 
 | Backend | Summary | Timeout behavior |
@@ -182,6 +185,17 @@ Validation checklist:
 4. Confirm the subsequent TCP auth succeeds only for the knocked source.
 5. Stop the service and confirm cleanup removes the UDP DROP rule and temporary TCP allow rules.
 6. On failure, run backend cleanup or remove the managed chain/set/rules, then restart with `DropUDPKnockPort` disabled.
+
+
+Real-host validation checklist for system backends:
+
+1. Create a controlled test service and initialize the selected backend (`nftables`, `ipset-iptables`, or `iptables`).
+2. Confirm a valid knock creates only libknock-owned rules/sets for the expected source IP and protected port.
+3. Confirm revoke removes the temporary allow entry.
+4. Confirm cleanup removes managed chains/tables/sets/rules without touching unrelated host policy.
+5. Repeat startup and verify stale managed rules from the previous run are cleaned.
+6. Simulate abnormal exit, then run startup cleanup or manual cleanup and verify no temporary allow rule remains.
+7. Repeat IPv4 and IPv6 cases when the deployment enables both families.
 
 ## Gate and relay integration
 

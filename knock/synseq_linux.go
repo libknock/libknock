@@ -16,6 +16,7 @@ import (
 )
 
 func SendSYNSequence(ctx context.Context, opts SendOptions) error {
+	ctx = backgroundIfNil(ctx)
 	if err := ValidateSendOptions(opts); err != nil {
 		return err
 	}
@@ -133,6 +134,7 @@ func sendSYNSequenceIPv6(ctx context.Context, opts SendOptions, remote *net.TCPA
 }
 
 func ListenSYNSequence(ctx context.Context, opts ListenOptions, handler Handler) error {
+	ctx = backgroundIfNil(ctx)
 	if err := ValidateClientSecrets(opts.Clients); err != nil {
 		return err
 	}
@@ -177,6 +179,7 @@ func ListenSYNSequence(ctx context.Context, opts ListenOptions, handler Handler)
 }
 
 func Send(ctx context.Context, opts SendOptions) error {
+	ctx = backgroundIfNil(ctx)
 	if err := ValidateSendOptions(opts); err != nil {
 		return err
 	}
@@ -278,6 +281,7 @@ func sendIPv6(ctx context.Context, opts SendOptions, remote *net.TCPAddr) error 
 }
 
 func Listen(ctx context.Context, opts ListenOptions, handler Handler) error {
+	ctx = backgroundIfNil(ctx)
 	if err := ValidateClientSecrets(opts.Clients); err != nil {
 		return err
 	}
