@@ -31,6 +31,6 @@ wrap the TCP listener with `libknock.NewListener`, then pass the protected liste
 ## Validation commands
 
 ```sh
-`go build ./examples/tls-server ./examples/tls-client ./examples/http-client/server ./examples/http-client/client`
-scripts/check-integration.sh
+go build ./examples/tls-server ./examples/tls-client ./examples/http-client/server ./examples/http-client/client
+bash scripts/check-integration.sh
 ```

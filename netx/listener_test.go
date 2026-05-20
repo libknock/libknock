@@ -180,3 +180,54 @@ func TestAuthenticatedListenerCloseInterruptsInFlightAuth(t *testing.T) {
 		t.Fatalf("Close waited %s, want much less than AuthTimeout", elapsed)
 	}
 }
+
+type closeRecordingListener struct {
+	conn   chan net.Conn
+	closed chan struct{}
+	err    error
+}
+
+func (l *closeRecordingListener) Accept() (net.Conn, error) {
+	conn, ok := <-l.conn
+	if !ok {
+		return nil, l.err
+	}
+	return conn, nil
+}
+func (l *closeRecordingListener) Close() error {
+	select {
+	case <-l.closed:
+	default:
+		close(l.closed)
+	}
+	return nil
+}
+func (l *closeRecordingListener) Addr() net.Addr {
+	return &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 443}
+}
+
+func TestAuthenticatedListenerCloseAfterAcceptErrorInterruptsInFlightAuth(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	server, client := net.Pipe()
+	defer client.Close()
+	raw := &closeRecordingListener{conn: make(chan net.Conn, 1), closed: make(chan struct{}), err: net.ErrClosed}
+	raw.conn <- server
+	wrapped, err := WrapListenerWithConfigE(raw, ListenerConfig{Auth: auth.ServerConfig{ServerPort: 443, Secrets: auth.StaticSecrets{"client": secret}, AuthTimeout: 5 * time.Second}, MaxAuthWorkers: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	close(raw.conn)
+	time.Sleep(50 * time.Millisecond)
+	start := time.Now()
+	if err := wrapped.Close(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-raw.closed:
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("underlying listener was not closed")
+	}
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Fatalf("Close waited %s after accept error, want much less than AuthTimeout", elapsed)
+	}
+}

@@ -2,6 +2,7 @@ package firewall
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/netip"
 	"time"
@@ -18,6 +19,7 @@ type Nftables struct {
 }
 
 func NewNftables(cfg Config, name string) *Nftables {
+	cfg = cfg.WithDefaults()
 	family := cfg.Nftables.Family
 	if family == "" {
 		family = "inet"
@@ -60,8 +62,8 @@ func (n *Nftables) WithConfig(cfg Config) (Backend, error) {
 }
 
 func (n *Nftables) Init(ctx context.Context) error {
-	if n.cfg.AllowSeconds <= 0 {
-		return fmt.Errorf("nftables allow_seconds must be greater than zero")
+	if err := validateNftablesConfig(n.cfg.Nftables); err != nil {
+		return err
 	}
 	udpDropRule := ""
 	if n.cfg.DropUDPKnockPort {
@@ -89,8 +91,14 @@ func (n *Nftables) Init(ctx context.Context) error {
 }
 `, n.family, n.table, n.setV4, int(n.cfg.AllowSeconds), n.setV6, int(n.cfg.AllowSeconds), n.chain, n.setV4, n.cfg.Port, n.setV6, n.cfg.Port, n.cfg.Port, udpDropRule)
 
-	_ = n.Cleanup(ctx)
-	return runInputWithConfig(ctx, n.cfg, createScript, "nft", "-f", "-")
+	if err := n.Cleanup(ctx); err != nil {
+		return err
+	}
+	if err := runInputWithConfig(ctx, n.cfg, createScript, "nft", "-f", "-"); err != nil {
+		cleanupErr := n.cleanupDetached()
+		return errors.Join(err, cleanupErr)
+	}
+	return nil
 }
 
 func (n *Nftables) Allow(ctx context.Context, addr netip.Addr, port int, ttl time.Duration) error {
@@ -110,12 +118,12 @@ func (n *Nftables) Allow(ctx context.Context, addr netip.Addr, port int, ttl tim
 			return fmt.Errorf("invalid IP address %s", addr.String())
 		}
 		deleteInput := fmt.Sprintf("delete element %s %s %s { %s }\n", n.family, n.table, n.setV6, addr.String())
-		_ = runInputWithConfig(ctx, n.cfg, deleteInput, "nft", "-f", "-")
+		_ = ignoreMissingFirewallObject(runInputWithConfig(ctx, n.cfg, deleteInput, "nft", "-f", "-"))
 		input := fmt.Sprintf("add element %s %s %s { %s timeout %ds }\n", n.family, n.table, n.setV6, addr.String(), seconds)
 		return runInputWithConfig(ctx, n.cfg, input, "nft", "-f", "-")
 	}
 	deleteInput := fmt.Sprintf("delete element %s %s %s { %s }\n", n.family, n.table, n.setV4, v4.String())
-	_ = runInputWithConfig(ctx, n.cfg, deleteInput, "nft", "-f", "-")
+	_ = ignoreMissingFirewallObject(runInputWithConfig(ctx, n.cfg, deleteInput, "nft", "-f", "-"))
 	input := fmt.Sprintf("add element %s %s %s { %s timeout %ds }\n", n.family, n.table, n.setV4, v4.String(), seconds)
 	return runInputWithConfig(ctx, n.cfg, input, "nft", "-f", "-")
 }
@@ -137,7 +145,10 @@ func (n *Nftables) IsAllowed(ctx context.Context, addr netip.Addr, port int) (bo
 		addrText = v4.String()
 	}
 	if err := runWithConfig(ctx, n.cfg, "nft", "get", "element", n.family, n.table, set, "{", addrText, "}"); err != nil {
-		return false, nil
+		if isMissingFirewallObject(err) {
+			return false, nil
+		}
+		return false, err
 	}
 	return true, nil
 }
@@ -152,12 +163,21 @@ func (n *Nftables) Revoke(ctx context.Context, addr netip.Addr, port int) error 
 			return nil
 		}
 		input := fmt.Sprintf("delete element %s %s %s { %s }\n", n.family, n.table, n.setV6, addr.String())
-		return runInputWithConfig(ctx, n.cfg, input, "nft", "-f", "-")
+		return ignoreMissingFirewallObject(runInputWithConfig(ctx, n.cfg, input, "nft", "-f", "-"))
 	}
 	input := fmt.Sprintf("delete element %s %s %s { %s }\n", n.family, n.table, n.setV4, v4.String())
-	return runInputWithConfig(ctx, n.cfg, input, "nft", "-f", "-")
+	return ignoreMissingFirewallObject(runInputWithConfig(ctx, n.cfg, input, "nft", "-f", "-"))
 }
 
 func (n *Nftables) Cleanup(ctx context.Context) error {
+	if err := validateNftablesConfig(n.cfg.Nftables); err != nil {
+		return err
+	}
 	return ignoreMissingFirewallObject(runInputWithConfig(ctx, n.cfg, fmt.Sprintf("delete table %s %s\n", n.family, n.table), "nft", "-f", "-"))
+}
+
+func (n *Nftables) cleanupDetached() error {
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), defaultCommandTimeout)
+	defer cancel()
+	return n.Cleanup(cleanupCtx)
 }

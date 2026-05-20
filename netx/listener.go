@@ -51,6 +51,7 @@ type AuthenticatedListener struct {
 	pending        chan net.Conn
 	done           chan struct{}
 	closeOnce      sync.Once
+	doneOnce       sync.Once
 	readyOnce      sync.Once
 	wg             sync.WaitGroup
 	mu             sync.Mutex
@@ -114,7 +115,7 @@ func (l *AuthenticatedListener) Close() error {
 	l.closeOnce.Do(func() {
 		l.setErr(net.ErrClosed)
 		l.cancel()
-		close(l.done)
+		l.closeDone()
 		err = l.Listener.Close()
 		l.closeInFlight()
 	})
@@ -141,7 +142,7 @@ func (l *AuthenticatedListener) acceptLoop() {
 		conn, err := l.Listener.Accept()
 		if err != nil {
 			l.setErr(err)
-			l.closeOnce.Do(func() { close(l.done) })
+			l.closeDone()
 			return
 		}
 		select {
@@ -225,6 +226,10 @@ func (l *AuthenticatedListener) untrackInFlight(conn net.Conn) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	delete(l.inFlight, conn)
+}
+
+func (l *AuthenticatedListener) closeDone() {
+	l.doneOnce.Do(func() { close(l.done) })
 }
 
 func (l *AuthenticatedListener) closeInFlight() {

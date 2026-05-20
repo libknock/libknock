@@ -10,6 +10,14 @@ scripts/check.sh
 
 The script works both inside a git checkout and from a release source zip. Publish both `libknock-VERSION.zip` for normal Go module users and `libknock-VERSION-with-vendor.zip` for offline review, reproducible local audit, LLM-assisted integration, and restricted CI. The vendored archive must include `vendor/`, `vendor/modules.txt`, `go.work`, and `go.work.sum`.
 
+Package archives with:
+
+```sh
+scripts/package-release.sh --with-vendor VERSION dist/
+```
+
+Use `--standard-only` or `--with-vendor-only` only for re-running one side of the packaging gate.
+
 Expanded core commands, if running steps manually:
 
 ```sh
@@ -154,6 +162,9 @@ For source archives:
 - `README.md` present
 - `docs/` present
 - module files present
+- standard archive excludes `vendor/`
+- `with-vendor` archive includes `vendor/modules.txt` and builds with `-mod=vendor`
+- SHA-256 files correspond to the uploaded archives
 
 
 ## 11. Release decision

@@ -49,6 +49,7 @@ func doctorServer(ctx context.Context, cfg fileConfig, checkUpstream bool) ([]do
 		return checks, err
 	}
 	checks = append(checks, doctorCheck{Name: "runtime", OK: true, Info: fmt.Sprintf("listen=%s upstream=%s knock=%s firewall=%s", summary.Listen, summary.Upstream, summary.KnockMethod, summary.Firewall)})
+	checks = append(checks, doctorCheck{Name: "firewall summary", OK: summary.Firewall != "noop", Blocking: false, Info: fmt.Sprintf("backend=%s installs_rules=%t port_hidden=%t allow_seconds=%d ipv6=%s", summary.Firewall, summary.FirewallInstalls, summary.PortHidden, summary.AllowSeconds, summary.IPv6)})
 	probe, err := firewall.Probe(ctx, rt.Firewall)
 	if err != nil {
 		checks = append(checks, doctorCheck{Name: "firewall probe", OK: false, Blocking: true, Info: err.Error()})

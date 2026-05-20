@@ -138,6 +138,16 @@ func printSummary(s runSummary) {
 	}
 	if s.Firewall != "" {
 		_, _ = fmt.Fprintf(os.Stdout, " firewall=%s", s.Firewall)
+		_, _ = fmt.Fprintf(os.Stdout, " firewall_installs_rules=%t port_hidden=%t", s.FirewallInstalls, s.PortHidden)
+		if s.AllowSeconds > 0 {
+			_, _ = fmt.Fprintf(os.Stdout, " allow_seconds=%d", s.AllowSeconds)
+		}
+		if s.IPv6 != "" {
+			_, _ = fmt.Fprintf(os.Stdout, " ipv6=%s", s.IPv6)
+		}
+		if s.Firewall == "noop" {
+			_, _ = fmt.Fprint(os.Stdout, " warning=noop-does-not-install-firewall-rules")
+		}
 	}
 	if s.Clients > 0 {
 		_, _ = fmt.Fprintf(os.Stdout, " clients=%d", s.Clients)

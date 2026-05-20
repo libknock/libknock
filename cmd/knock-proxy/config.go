@@ -102,6 +102,7 @@ type firewallConfig struct {
 	DefaultAction   string         `yaml:"default_action"`
 	AllowSeconds    int            `yaml:"allow_seconds"`
 	RemoveAfterAuth bool           `yaml:"remove_after_auth"`
+	EnableIPv6      *bool          `yaml:"enable_ipv6"`
 	Nftables        nftablesConfig `yaml:"nftables"`
 	Iptables        iptablesConfig `yaml:"iptables"`
 	IPSet           ipsetConfig    `yaml:"ipset"`
@@ -537,7 +538,7 @@ func sequenceOptions(k knockConfig) (knock.SequenceOptions, time.Duration, error
 }
 
 func firewallConfigToLib(c firewallConfig) firewall.Config {
-	return firewall.Config{Backend: c.Backend, Port: c.Port, AllowSeconds: c.AllowSeconds, Nftables: firewall.NftablesConfig{Table: c.Nftables.Table, Chain: c.Nftables.Chain, SetV4: c.Nftables.SetV4, SetV6: c.Nftables.SetV6, Family: c.Nftables.Family}, Iptables: firewall.IptablesConfig{Chain: c.Iptables.Chain}, IPSet: firewall.IPSetConfig{Set: c.IPSet.Set, SetV6: c.IPSet.SetV6}, Script: firewall.ScriptConfig{AllowCmd: c.Script.AllowCmd, RevokeCmd: c.Script.RevokeCmd, CleanupCmd: c.Script.CleanupCmd}}
+	return firewall.Config{Backend: c.Backend, Port: c.Port, AllowSeconds: c.AllowSeconds, EnableIPv6: c.EnableIPv6, Nftables: firewall.NftablesConfig{Table: c.Nftables.Table, Chain: c.Nftables.Chain, SetV4: c.Nftables.SetV4, SetV6: c.Nftables.SetV6, Family: c.Nftables.Family}, Iptables: firewall.IptablesConfig{Chain: c.Iptables.Chain}, IPSet: firewall.IPSetConfig{Set: c.IPSet.Set, SetV6: c.IPSet.SetV6}, Script: firewall.ScriptConfig{AllowCmd: c.Script.AllowCmd, RevokeCmd: c.Script.RevokeCmd, CleanupCmd: c.Script.CleanupCmd}}
 }
 
 func resolveUDPListen(k knockConfig, tcpListen string) (string, int, error) {

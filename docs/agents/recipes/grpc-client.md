@@ -31,6 +31,7 @@ use `libknock.Dialer(cfg)` or a context dialer that calls `libknock.ClientAuth` 
 ## Validation commands
 
 ```sh
-`go test ./test/integration/grpc/... && go build ./examples/grpc-client`
-scripts/check-integration.sh
+go -C test/integration/grpc test ./...
+go build ./examples/grpc-client
+bash scripts/check-integration.sh
 ```

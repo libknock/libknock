@@ -14,13 +14,17 @@ import (
 )
 
 type runSummary struct {
-	Mode        string
-	Listen      string
-	Upstream    string
-	ServerAddr  string
-	KnockMethod string
-	Firewall    string
-	Clients     int
+	Mode             string
+	Listen           string
+	Upstream         string
+	ServerAddr       string
+	KnockMethod      string
+	Firewall         string
+	FirewallInstalls bool
+	PortHidden       bool
+	AllowSeconds     int
+	IPv6             string
+	Clients          int
 }
 
 func buildServer(cfg fileConfig) (relay.Gateway, runSummary, error) {
@@ -55,7 +59,17 @@ func buildServer(cfg fileConfig) (relay.Gateway, runSummary, error) {
 		MaxAuthWorkers:         rt.MaxAuthWorkers,
 		Events:                 textEvents{},
 	}
-	return g, runSummary{Mode: modeServer, Listen: rt.Listen, Upstream: rt.Upstream, KnockMethod: rt.KnockMethod, Firewall: fw.Name(), Clients: len(rt.Secrets)}, nil
+	return g, runSummary{Mode: modeServer, Listen: rt.Listen, Upstream: rt.Upstream, KnockMethod: rt.KnockMethod, Firewall: fw.Name(), FirewallInstalls: fw.Name() != "noop", PortHidden: fw.Name() != "noop", AllowSeconds: rt.Firewall.WithDefaults().AllowSeconds, IPv6: ipv6Summary(rt.Firewall), Clients: len(rt.Secrets)}, nil
+}
+
+func ipv6Summary(cfg firewall.Config) string {
+	if cfg.EnableIPv6 == nil {
+		return "auto"
+	}
+	if *cfg.EnableIPv6 {
+		return "enabled"
+	}
+	return "disabled"
 }
 
 func buildClient(cfg fileConfig) (clientRuntime, libknock.Dialer, runSummary, error) {

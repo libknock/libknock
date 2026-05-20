@@ -31,6 +31,6 @@ configure `Gateway{Listen, Upstream, Auth, Firewall, KnockMethod}` or `knock-pro
 ## Validation commands
 
 ```sh
-`go test ./relay ./cmd/knock-proxy`
-scripts/check-integration.sh
+go test ./relay ./cmd/knock-proxy
+bash scripts/check-integration.sh
 ```

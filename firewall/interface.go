@@ -49,10 +49,20 @@ type Config struct {
 	Runner           Runner
 	DropUDPKnockPort bool
 	UDPKnockPort     int
+	EnableIPv6       *bool
 	Nftables         NftablesConfig
 	Iptables         IptablesConfig
 	IPSet            IPSetConfig
 	Script           ScriptConfig
+}
+
+const DefaultAllowSeconds = 15
+
+func (c Config) WithDefaults() Config {
+	if c.AllowSeconds <= 0 {
+		c.AllowSeconds = DefaultAllowSeconds
+	}
+	return c
 }
 
 type NftablesConfig struct{ Table, Chain, SetV4, SetV6, Family string }
@@ -149,6 +159,7 @@ func Describe(name string) Capabilities {
 }
 
 func New(cfg Config) (Backend, error) {
+	cfg = cfg.WithDefaults()
 	name := cfg.Backend
 	if name == "" {
 		name = "auto"
@@ -303,12 +314,30 @@ func validateNftablesConfig(cfg NftablesConfig) error {
 	if cfg.Family != "" && cfg.Family != "inet" {
 		return fmt.Errorf("only nftables family inet is supported, got %q", cfg.Family)
 	}
+	if cfg.Table != "" && !isSafeNftablesTable(cfg.Table) {
+		return fmt.Errorf("unsafe nftables table %q: use a libknock-owned table such as knock_gateway or libknock_*", cfg.Table)
+	}
 	for label, value := range map[string]string{"table": cfg.Table, "chain": cfg.Chain, "set_v4": cfg.SetV4, "set_v6": cfg.SetV6} {
 		if value != "" && !nftIdentifierRE.MatchString(value) {
 			return fmt.Errorf("invalid nftables %s identifier %q", label, value)
 		}
 	}
 	return nil
+}
+
+func isSafeNftablesTable(table string) bool {
+	switch table {
+	case "filter", "nat", "mangle", "raw", "security":
+		return false
+	}
+	return table == "knock_gateway" || table == "knock_proxy" || strings.HasPrefix(table, "libknock_") || strings.HasPrefix(table, "knock_gateway_") || strings.HasPrefix(table, "knock_proxy_")
+}
+
+func ipv6Enabled(cfg Config, backend string) bool {
+	if cfg.EnableIPv6 != nil {
+		return *cfg.EnableIPv6
+	}
+	return firewallCommandExists(cfg, "ip6tables")
 }
 
 func validateIptablesConfig(cfg IptablesConfig) error {

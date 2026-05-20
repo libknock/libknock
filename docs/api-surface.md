@@ -27,6 +27,8 @@ Use `auth` when an integration needs protocol selectors, custom secret resolutio
 
 `knock`, `firewall`, `gate`, `relay`, and `observability` are public advanced packages. Raw packet, passive-capture, SYN, and host firewall paths require target-host validation as documented in the validation matrix and known limitations.
 
+Coding agents should not treat these packages as the default integration surface. Start from the root package or `auth` unless the task explicitly involves knock methods, firewall mutation, gate composition, relay compatibility, or observability adapters. Do not add application config parsing, long-running service orchestration, or product-specific policy to SDK core packages.
+
 ## Command package
 
 `cmd/knock-proxy` is maintained as a relay compatibility command. It should not be read as a complete CLI wrapper for every SDK gate mode.

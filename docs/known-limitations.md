@@ -23,6 +23,10 @@ UDP knock uses binary AEAD frames. There is no JSON fallback. Active UDP and UDP
 
 Knock + TCP auth modes bind TCP authentication to a prior knock session. Session IDs, client IDs, remote addresses, and protected ports are part of the intended security boundary. Disabling session binding or using firewall-only admission weakens attribution and should be treated as an explicit deployment trade-off.
 
+## Failure semantics
+
+Authentication failures intentionally do not expose detailed reasons to unauthenticated network peers; callers and event sinks can inspect internal errors. Firewall-backed gates fail closed when they cannot record or enforce a lease. Cleanup and revoke errors are observable and should be handled as operational incidents, but a best-effort cleanup attempt is still made on shutdown.
+
 ## Operational scope
 
 libknock authenticates before the application protocol starts and then returns a clean `net.Conn`. It does not inspect application payloads, replace TLS, manage long-term secret storage, or guarantee firewall behavior outside the configured backend and host environment.

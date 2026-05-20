@@ -9,3 +9,15 @@
 | `custom-binary-protocol` | custom TCP protocol | `docs/agents/recipes/tcp-listener.md` |
 
 Run each example from its directory with the commands in its local README.
+
+
+## Quick validation
+
+```sh
+go build ./examples/tcp-echo-server ./examples/tcp-echo-client
+go build ./examples/tls-server ./examples/tls-client
+go build ./examples/http-client/server ./examples/http-client/client
+go test ./examples/grpc-client/... ./examples/grpc-server/...
+```
+
+The gRPC examples are also exercised by `test/integration/grpc`. Keep example READMEs linked from the recipe table above when adding or renaming examples.

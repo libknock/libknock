@@ -26,6 +26,10 @@ type Backend interface {
 | `script` | Calls executable paths for allow, revoke, and cleanup. | Defined by scripts. |
 | `auto` | Chooses an available Linux backend according to backend detection. | Depends on detected backend. |
 
+## Defaults and IPv6
+
+`allow_seconds` defaults to 15 seconds when the SDK or CLI constructs a timeout-capable backend directly. `iptables` and `ipset-iptables` keep IPv6 auto-detection by default, but deployments can set `enable_ipv6: false` to force IPv4-only operation in containers or minimal systems where `ip6tables` exists but cannot be used safely.
+
 ## Backend selection
 
 Recommended production order:
@@ -37,7 +41,7 @@ iptables
 script
 ```
 
-Use `noop` only for auth-only workflows, tests, and local development.
+Use `noop` only for auth-only workflows, knock-auth-only workflows, tests, and local development. It records no host firewall state and must not be described as port hiding.
 
 `auto` detects Linux backends in this order:
 
@@ -59,6 +63,9 @@ fw, err := firewall.New(firewall.Config{
 `Allow`, `Revoke`, and `IsAllowed` validate the same protected port where applicable.
 
 ## nftables
+
+The nftables backend owns and deletes its configured table during cleanup. Use only a libknock-owned nftables table such as `knock_gateway`, `knock_proxy`, `knock_gateway_*`, `knock_proxy_*`, or `libknock_*`. System tables such as `filter`, `nat`, `mangle`, `raw`, and `security` are rejected to avoid deleting host firewall policy.
+
 
 The nftables backend uses conservative object names and `family inet`. Sets use explicit timeout flags. Keep configured table, chain, and set names dedicated to `libknock` because cleanup owns those objects.
 
@@ -165,6 +172,10 @@ Rules:
 
 `GateKnockFirewallAuth`, `GateKnockFirewallOnly`, and relay knock/firewall workflows require a real firewall backend. `GateAuthOnly` and relay auth-only workflows can use `firewall.Noop{}`.
 
+## Failure semantics
+
+Firewall-backed gate and relay modes should fail closed when a backend cannot initialize, allow a client, or record the lease needed for later revoke. Cleanup and revoke failures are surfaced through errors and gateway firewall-error events; operators should alert on them and verify host state.
+
 ## Cleanup
 
 Call `Cleanup` during controlled shutdown. `gate` and `relay.Gateway` wire cleanup to context cancellation for their managed listeners. For system firewall backends, pair service lifecycle with a shutdown hook in the hosting process or service manager.
@@ -183,3 +194,11 @@ res, err := firewall.Probe(ctx, firewall.Config{
 ```
 
 Check command availability, effective user privileges, and backend-specific errors before opening the listener.
+
+## Firewall failure semantics
+
+- `allow` failure does not create an authenticated session and must be surfaced as a firewall error event.
+- TCP authentication failure never enters the upstream protocol.
+- `revoke` and `cleanup` treat already-missing rules, sets, or elements as success, but permission errors, lock failures, syntax errors, and backend command failures are returned.
+- Cleanup uses a detached short-timeout context on shutdown or rollback so cancelled serve contexts do not skip firewall cleanup.
+- Public peers should receive only connection/auth failure behavior; detailed firewall errors belong in local logs/events.

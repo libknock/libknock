@@ -28,6 +28,10 @@ Status legend:
 | Policy limiter and ban list | unit tested | n/a | n/a | race tested | n/a | n/a | Limiter semantics remain distinct from generic TTL cache semantics. |
 | Observability events | unit tested | integration tested | n/a | n/a | n/a | n/a | Event sinks receive metadata; secrets and sealed payloads are not emitted. |
 
+## Interpreting the matrix
+
+`unit tested`, `integration tested`, `dry-run tested`, and `race tested` are repository evidence levels. They are not substitutes for target-host validation of firewall rule order, kernel modules, packet-capture privileges, NAT behavior, container network namespaces, or Windows/macOS driver installation. Keep release notes conservative unless a validation record exists in the shape of `docs/validation-template.md`.
+
 Recommended local code gate:
 
 ```sh

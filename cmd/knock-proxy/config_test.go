@@ -340,3 +340,25 @@ firewall:
 		t.Fatalf("serverRuntime err = %v, want remove_after_auth conflict", err)
 	}
 }
+
+func TestServerRuntimePassesFirewallEnableIPv6(t *testing.T) {
+	cfg := mustLoadConfig(t, `mode: server
+server:
+  tcp_listen: "127.0.0.1:10443"
+  upstream: "127.0.0.1:22"
+auth:
+  clients:
+    - client_id: client-a
+      secret: `+demoSecret+`
+firewall:
+  backend: noop
+  enable_ipv6: false
+`)
+	rt, err := cfg.serverRuntime()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rt.Firewall.EnableIPv6 == nil || *rt.Firewall.EnableIPv6 {
+		t.Fatalf("EnableIPv6 = %#v, want false", rt.Firewall.EnableIPv6)
+	}
+}

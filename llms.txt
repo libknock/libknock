@@ -50,3 +50,16 @@ Docs to update when API changes:
 - docs/api-surface.md
 - COMPATIBILITY.md
 - docs/zh-cn/api.md
+
+Agent task index:
+- TCP listener: docs/agents/recipes/tcp-listener.md -> examples/tcp-echo-server/, examples/custom-binary-protocol/
+- TLS/HTTP: docs/agents/recipes/tls-http-server.md -> examples/tls-server/, examples/tls-client/, examples/http-client/
+- gRPC: docs/agents/recipes/grpc-server.md and docs/agents/recipes/grpc-client.md -> examples/grpc-server/, examples/grpc-client/, test/integration/grpc/
+- Relay gateway: docs/agents/recipes/relay-gateway.md -> cmd/knock-proxy/, docs/gate-and-relay.md
+- Knock auth-only: docs/agents/recipes/knock-auth-only.md -> docs/modes.md
+- Firewall gate: docs/agents/recipes/firewall-gate.md -> docs/firewall.md, docs/validation-template.md
+- Config mapping: docs/agents/recipes/config-mapping.md -> docs/getting-started.md#7-build-sdk-config-from-application-config
+
+Packaging:
+- Standard archive: scripts/package-release.sh --standard-only VERSION dist/
+- Standard plus vendored archive: scripts/package-release.sh --with-vendor VERSION dist/

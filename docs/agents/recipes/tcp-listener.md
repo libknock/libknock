@@ -17,8 +17,13 @@ root `libknock.NewListener` around an existing `net.Listener`.
 
 ## Minimal shape
 
-```text
-`ln, _ := net.Listen("tcp", addr); protected, _ := libknock.NewListener(ln, cfg); for { c, _ := protected.Accept(); go serve(c) }`
+```go
+ln, _ := net.Listen("tcp", addr)
+protected, _ := libknock.NewListener(ln, cfg)
+for {
+    c, _ := protected.Accept()
+    go serve(c)
+}
 ```
 
 ## Common mistakes
@@ -31,6 +36,6 @@ root `libknock.NewListener` around an existing `net.Listener`.
 ## Validation commands
 
 ```sh
-`go test ./netx ./auth && scripts/check-integration.sh`
-scripts/check-integration.sh
+go test ./netx ./auth
+bash scripts/check-integration.sh
 ```

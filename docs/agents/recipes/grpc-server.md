@@ -31,6 +31,7 @@ create `net.Listener`, wrap with `libknock.NewListener`, then call `grpcServer.S
 ## Validation commands
 
 ```sh
-`go test ./test/integration/grpc/... && go build ./examples/grpc-server`
-scripts/check-integration.sh
+go -C test/integration/grpc test ./...
+go build ./examples/grpc-server
+bash scripts/check-integration.sh
 ```

@@ -6,7 +6,7 @@ mapping operator config files into SDK structs outside SDK core.
 
 ## Files to modify
 
-- cmd/knock-proxy/config.go, docs/configuration.md, docs/api-surface.md
+- cmd/knock-proxy/config.go, docs/getting-started.md, docs/api-surface.md
 - Update docs/tests next to the changed API or example.
 
 ## Files not to modify
@@ -31,6 +31,6 @@ parse config in your binary, then populate `auth.ServerConfig`, `netx.ListenerCo
 ## Validation commands
 
 ```sh
-`go test ./cmd/knock-proxy ./auth ./netx`
-scripts/check-integration.sh
+go test ./cmd/knock-proxy ./auth ./netx
+bash scripts/check-integration.sh
 ```

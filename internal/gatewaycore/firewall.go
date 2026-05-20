@@ -2,6 +2,7 @@ package gatewaycore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/netip"
 	"time"
@@ -38,7 +39,8 @@ func CleanupFirewallDetached(fw firewall.Backend) error {
 
 func InitFirewall(ctx context.Context, fw firewall.Backend) error {
 	if err := fw.Init(ctx); err != nil {
-		return fmt.Errorf("initialize firewall backend %s: %w", fw.Name(), err)
+		cleanupErr := CleanupFirewallDetached(fw)
+		return errors.Join(fmt.Errorf("initialize firewall backend %s: %w", fw.Name(), err), cleanupErr)
 	}
 	return nil
 }

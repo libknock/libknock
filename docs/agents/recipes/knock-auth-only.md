@@ -31,6 +31,6 @@ configure knock clients, shared replay cache, session binding, and TCP auth with
 ## Validation commands
 
 ```sh
-`go test ./gate ./relay ./knock ./auth`
-scripts/check-integration.sh
+go test ./gate ./relay ./knock ./auth
+bash scripts/check-integration.sh
 ```

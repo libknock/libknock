@@ -31,6 +31,6 @@ use `gate.New`/`Gate` with a validated firewall backend and TTL; fail closed if 
 ## Validation commands
 
 ```sh
-`go test ./gate ./firewall ./relay`
-scripts/check-integration.sh
+go test ./gate ./firewall ./relay
+bash scripts/check-integration.sh
 ```

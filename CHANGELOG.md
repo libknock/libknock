@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.1.0-rc2.4 - 2026-05-20
+
+See [docs/release-notes/v0.1.0-rc2.4.md](docs/release-notes/v0.1.0-rc2.4.md).
+
+### Release scope
+
+- Harden firewall cleanup/rollback, revoke idempotency, `IsAllowed` error propagation, nftables table safety, default allow seconds, and IPv4-only configuration.
+- Improve `knock-proxy` firewall summaries and doctor visibility for noop/non-port-hiding modes.
+- Complete standard vs `with-vendor` packaging docs/scripts, release validation gates, validation matrix, and agent recipes.
+
+## v0.1.0-rc2.3 - 2026-05-20
+
+See [docs/release-notes/v0.1.0-rc2.3.md](docs/release-notes/v0.1.0-rc2.3.md).
+
+### Release status
+
+- Published as a GitHub pre-release candidate.
+- Keeps the standard archive module-first while documenting the companion `with-vendor` archive for offline audit, restricted CI, reproducible local review, and LLM-assisted integration.
+
+### Documentation and release process
+
+- Clarifies validation-matrix and known-limitations wording for firewall backends, passive UDP capture, TCP SYN paths, Windows/macOS packet integrations, long-running fuzz, and production performance characterization.
+- Reinforces `auth-only` and `knock-auth-only` semantics: the TCP listener remains visible; application protocol admission is authenticated.
+- Documents `iptables` as a process-managed cleanup fallback and recommends `nftables` or `ipset-iptables` where kernel-enforced expiry is required.
+
 ## v0.1.0-rc2 - 2026-05-19
 
 See [docs/release-notes/v0.1.0-rc2.md](docs/release-notes/v0.1.0-rc2.md).

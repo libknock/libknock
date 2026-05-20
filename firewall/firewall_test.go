@@ -257,10 +257,10 @@ func TestIPSetIptablesWithConfigInjectsPort(t *testing.T) {
 	}
 }
 
-func TestNftablesRejectsZeroAllowSeconds(t *testing.T) {
+func TestFirewallConfigDefaultsAllowSeconds(t *testing.T) {
 	fw := NewNftables(Config{Port: 443, Runner: &captureRunner{}}, "nftables")
-	if err := fw.Init(context.Background()); err == nil {
-		t.Fatal("Init succeeded with zero AllowSeconds")
+	if got := fw.cfg.AllowSeconds; got != DefaultAllowSeconds {
+		t.Fatalf("AllowSeconds = %d, want %d", got, DefaultAllowSeconds)
 	}
 }
 
@@ -345,5 +345,96 @@ func TestScriptValidateChecksCommandsWithoutSideEffects(t *testing.T) {
 	}
 	if len(r.commands) != 0 {
 		t.Fatalf("Validate executed commands: %v", r.commands)
+	}
+}
+
+func TestNftablesRejectsSystemTableNames(t *testing.T) {
+	for _, table := range []string{"filter", "nat", "mangle", "raw", "security", "custom"} {
+		if err := validateNftablesConfig(NftablesConfig{Table: table}); err == nil {
+			t.Fatalf("expected unsafe table %q to be rejected", table)
+		}
+	}
+	for _, table := range []string{"knock_gateway", "knock_proxy", "libknock_gate", "knock_gateway_test"} {
+		if err := validateNftablesConfig(NftablesConfig{Table: table}); err != nil {
+			t.Fatalf("safe table %q rejected: %v", table, err)
+		}
+	}
+}
+
+func TestCleanupPropagatesRealErrors(t *testing.T) {
+	r := &firewallDryRunRunner{failContains: "-F KNOCK_GATEWAY"}
+	fw := NewIptables(Config{Port: 443, Runner: r})
+	if err := fw.Cleanup(context.Background()); err == nil || !strings.Contains(err.Error(), "injected failure") {
+		t.Fatalf("Cleanup err = %v, want injected failure", err)
+	}
+}
+
+func TestIPSetCleanupAggregatesIPv6Errors(t *testing.T) {
+	r := &firewallDryRunRunner{failContains: "ipset destroy knock_gateway_allowed_v6"}
+	fw := NewIPSetIptables(Config{Port: 443, Runner: r})
+	if err := fw.Cleanup(context.Background()); err == nil || !strings.Contains(err.Error(), "injected failure") {
+		t.Fatalf("Cleanup err = %v, want injected failure", err)
+	}
+}
+
+func TestFirewallInitRollsBackOnIPv6Failure(t *testing.T) {
+	r := &firewallDryRunRunner{failContains: "ip6tables -w 5 -A KNOCK_GATEWAY"}
+	fw := NewIptables(Config{Port: 443, Runner: r})
+	if err := fw.Init(context.Background()); err == nil || !strings.Contains(err.Error(), "injected failure") {
+		t.Fatalf("Init err = %v, want injected failure", err)
+	}
+	joined := strings.Join(r.commands, "\n")
+	if !strings.Contains(joined, "iptables -w 5 -F KNOCK_GATEWAY") || !strings.Contains(joined, "iptables -w 5 -X KNOCK_GATEWAY") {
+		t.Fatalf("rollback cleanup did not run after init failure\n%s", joined)
+	}
+}
+
+func TestRevokeMissingIsIdempotent(t *testing.T) {
+	addr := netip.MustParseAddr("192.0.2.10")
+	for _, fw := range []Backend{
+		NewNftables(Config{Port: 443, Runner: missingRuleRunner{}}, "nftables"),
+		NewIPSetIptables(Config{Port: 443, Runner: missingRuleRunner{}}),
+		NewIptables(Config{Port: 443, Runner: missingRuleRunner{}}),
+	} {
+		if err := fw.Revoke(context.Background(), addr, 443); err != nil {
+			t.Fatalf("%s Revoke missing err = %v", fw.Name(), err)
+		}
+	}
+}
+
+func TestIsAllowedReturnsBackendErrors(t *testing.T) {
+	addr := netip.MustParseAddr("192.0.2.10")
+	for _, checker := range []struct {
+		name string
+		fw   Checker
+	}{
+		{name: "nftables", fw: NewNftables(Config{Port: 443, Runner: errRunner{"permission denied"}}, "nftables")},
+		{name: "iptables", fw: NewIptables(Config{Port: 443, Runner: errRunner{"permission denied"}})},
+		{name: "ipset-iptables", fw: NewIPSetIptables(Config{Port: 443, Runner: errRunner{"permission denied"}})},
+	} {
+		if ok, err := checker.fw.IsAllowed(context.Background(), addr, 443); ok || err == nil || !strings.Contains(err.Error(), "permission denied") {
+			t.Fatalf("%s IsAllowed = %v, %v; want backend error", checker.name, ok, err)
+		}
+	}
+}
+
+type errRunner struct{ msg string }
+
+func (r errRunner) Run(context.Context, string, ...string) error { return errors.New(r.msg) }
+func (r errRunner) RunInput(context.Context, string, string, ...string) error {
+	return errors.New(r.msg)
+}
+
+func TestIptablesExplicitIPv6Disable(t *testing.T) {
+	disabled := false
+	r := &captureRunner{}
+	fw := NewIptables(Config{Port: 443, Runner: r, EnableIPv6: &disabled})
+	if err := fw.Init(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	for _, cmd := range r.commands {
+		if strings.HasPrefix(cmd, "ip6tables ") {
+			t.Fatalf("ip6tables command ran with IPv6 disabled: %s", cmd)
+		}
 	}
 }
