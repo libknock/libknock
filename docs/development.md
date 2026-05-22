@@ -52,6 +52,8 @@ Keep these invariants stable:
 
 ## Test workflow
 
+Run commands from the repository/workspace root. If a checkout or release archive has `vendor/` populated, keep `go.work` enabled and use `-mod=vendor`; do not combine `GOWORK=off` with workspace vendor mode.
+
 Core module:
 
 ```sh

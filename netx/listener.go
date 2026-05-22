@@ -21,6 +21,7 @@ type ListenerConfig struct {
 	Auth           auth.ServerConfig
 	MaxPendingAuth int
 	MaxAuthWorkers int
+	Events         EventSink
 }
 
 type errorListener struct {
@@ -174,8 +175,15 @@ func (l *AuthenticatedListener) acceptLoop() {
 			_ = conn.Close()
 			return
 		default:
+			l.reportAuthDrop(conn.RemoteAddr(), ErrAuthBackpressure)
 			_ = conn.Close()
 		}
+	}
+}
+
+func (l *AuthenticatedListener) reportAuthDrop(remote net.Addr, reason error) {
+	if l.listenerConfig.Events != nil {
+		l.listenerConfig.Events.OnAuthDrop(remote, reason, len(l.pending))
 	}
 }
 

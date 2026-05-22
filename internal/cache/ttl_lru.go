@@ -183,6 +183,14 @@ func (c *TTLLRU[K, V]) ActiveLen(now time.Time) int {
 	return active
 }
 
+func (c *TTLLRU[K, V]) LenAfterSweep(now time.Time) int {
+	if c == nil {
+		return 0
+	}
+	c.Sweep(now)
+	return c.Len()
+}
+
 func (c *TTLLRU[K, V]) Sweep(now time.Time) int {
 	if c == nil {
 		return 0

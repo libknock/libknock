@@ -267,8 +267,26 @@ func (c ServerConfig) Validate() error {
 		if err := c.EnvelopeV2.WithDefaults().Validate(c.MaxFrameSize); err != nil {
 			return err
 		}
+		if c.EnvelopeV2.WithDefaults().HintMode == protocol.EnvelopeV2HintModeNone && staticCandidateCount(c.Secrets) >= c.MaxAuthAttempts {
+			return ErrHintModeNoneTooBroad
+		}
 	}
 	return nil
+}
+
+func staticCandidateCount(resolver SecretResolver) int {
+	switch s := resolver.(type) {
+	case StaticSecrets:
+		return len(s)
+	case RotatingSecrets:
+		count := 0
+		for _, versions := range s {
+			count += len(versions)
+		}
+		return count
+	default:
+		return 0
+	}
 }
 
 func (c ClientConfig) Validate() error { return c.ValidateRuntime() }

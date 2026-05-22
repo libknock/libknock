@@ -2,6 +2,7 @@
 set -euo pipefail
 
 root=${1:-.}
+strict=${STRICT:-0}
 status=0
 
 check_single() {
@@ -29,10 +30,14 @@ if command -v dupl >/dev/null 2>&1; then
   dupl -threshold "${DUPL_THRESHOLD:-80}" -vendor=false "$root" || status=$?
 else
   echo "warning: dupl not found; external release-tool scan skipped" >&2
+  if [ "$strict" = "1" ]; then
+    echo "duplication scan failed: dupl is required when STRICT=1" >&2
+    exit 127
+  fi
 fi
 
 if [ "$status" -ne 0 ]; then
-  if [ "${STRICT:-0}" = "1" ]; then
+  if [ "$strict" = "1" ]; then
     echo "duplication scan failed" >&2
     exit "$status"
   fi

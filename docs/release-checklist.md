@@ -10,13 +10,13 @@ scripts/check.sh
 
 The script works both inside a git checkout and from a release source zip. Publish both `libknock-VERSION.zip` for normal Go module users and `libknock-VERSION-with-vendor.zip` for offline review, reproducible local audit, LLM-assisted integration, and restricted CI. The vendored archive must include `vendor/`, `vendor/modules.txt`, `go.work`, and `go.work.sum`.
 
-Package archives with:
+Package archives from a git checkout with:
 
 ```sh
 scripts/package-release.sh --with-vendor VERSION dist/
 ```
 
-Use `--standard-only` or `--with-vendor-only` only for re-running one side of the packaging gate.
+Use `--standard-only` or `--with-vendor-only` only for re-running one side of the packaging gate. The packaging script uses `git archive` when run in the repository so generated or untracked files do not accidentally enter release zips. If you must create archives from an exported source tree without `.git`, do not hand-roll a zip silently: first run the same source checks, vendor generation, path-traversal audit, and SHA-256 audit listed below, and record the non-git packaging reason in the release validation record. Prefer restoring a clean git checkout whenever possible.
 
 Expanded core commands, if running steps manually:
 
@@ -71,6 +71,16 @@ done
 Record the Go version used for the release.
 
 ## 5. Linux firewall environment checks
+
+These checks are Linux-only and require a controlled host with the required privileges. On Windows/macOS, skip them and record `platform-specific / not validated on current host`; the skip is not a core SDK failure.
+
+Suggested opt-in environment flags for automation:
+
+```text
+LIBKNOCK_RUN_PRIVILEGED_TESTS=1
+LIBKNOCK_RUN_LINUX_FIREWALL_TESTS=1
+LIBKNOCK_RUN_PACKET_TESTS=1
+```
 
 Run privileged tests or manual validation for:
 
@@ -154,6 +164,7 @@ Confirm docs cover:
 - UDP passive requirements
 - Windows/macOS platform boundaries
 - release test matrix
+- `llms.txt`, `docs/llms.md`, and agent recipes point IDE assistants at the root SDK path and current release boundaries
 
 ## 10. Artifact checks
 

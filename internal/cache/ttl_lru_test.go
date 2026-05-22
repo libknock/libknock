@@ -16,4 +16,10 @@ func TestTTLLRULenAndActiveLen(t *testing.T) {
 	if got := c.ActiveLen(now); got != 1 {
 		t.Fatalf("ActiveLen = %d, want 1", got)
 	}
+	if got := c.LenAfterSweep(now); got != 1 {
+		t.Fatalf("LenAfterSweep = %d, want 1", got)
+	}
+	if got := c.Len(); got != 1 {
+		t.Fatalf("Len after sweep = %d, want 1", got)
+	}
 }

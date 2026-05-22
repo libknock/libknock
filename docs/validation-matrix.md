@@ -60,3 +60,11 @@ Record benchmark output, Go version, OS/architecture, CPU model, and whether tes
 
 
 Dependency model: publish a standard source archive for normal Go module users and a companion `with-vendor` archive for offline review, reproducible local audit, LLM-assisted integration, and restricted CI. The vendored archive must include `vendor/`, `vendor/modules.txt`, `go.work`, and `go.work.sum`.
+
+## RC3.2 documentation-scaffolding status
+
+The rc3.2 documentation pass adds no new runtime validation claims. Its draft validation record is [`docs/validation/rc3.2.md`](validation/rc3.2.md). Treat the full release gate, package archive creation, real-host firewall checks, passive UDP DROP checks, Windows/macOS packet paths, long fuzz, and production throughput as pending until that record is replaced or supplemented with completed evidence.
+
+## Current-host platform validation boundary
+
+Validation records distinguish four states: validated by unit/integration test, validated by command dry-run, requires privileged host validation, and not validated on the current environment. Linux firewall mutation (`nftables`, `iptables`, `ipset-iptables`), UDP passive DROP behavior, Windows WinDivert/Npcap packet paths, and macOS BPF/pcap packet paths remain platform-specific privileged validations unless an RC record explicitly names the host and command output.

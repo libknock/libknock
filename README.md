@@ -15,7 +15,9 @@ It authenticates a compact binary frame after a TCP connection is established an
 
 ## Dependency model
 
-libknock uses Go modules as the primary dependency path. The standard source archive is for normal Go module users. The companion `with-vendor` archive includes `vendor/`, `vendor/modules.txt`, `go.work`, and `go.work.sum` for offline review, reproducible local audit, LLM-assisted integration, and restricted CI. Use `go test -mod=vendor ./...` and `go vet -mod=vendor ./...` when validating the vendored archive.
+libknock uses Go modules as the primary dependency path. The standard source archive is for normal Go module users. The companion `with-vendor` archive includes `vendor/`, `vendor/modules.txt`, `go.work`, and `go.work.sum` for offline review, reproducible local audit, LLM-assisted integration, and restricted CI. Use `go test -mod=vendor ./...` and `go vet -mod=vendor ./...` from the workspace root when validating the vendored archive. Keep `go.work` enabled; do not use `GOWORK=off` with workspace vendor mode.
+
+For coding-agent and LLM-assisted work, start with [`llms.txt`](llms.txt), [`docs/llms.md`](docs/llms.md), and [`docs/agents/AGENTS.md`](docs/agents/AGENTS.md). These files describe the supported integration entry points, forbidden shortcuts, vendored-workspace expectations, and task-specific recipes.
 
 ## What it provides
 
@@ -156,9 +158,9 @@ The frame carries authenticated metadata such as client identity hash, method, t
 
 | Method | Summary | Binds UDP socket | Extra privilege | Scan behavior |
 | --- | --- | --- | --- | --- |
-| `tcp-syn` | Single TCP SYN knock. | Raw packet capability on sender/listener platforms. |
-| `tcp-syn-seq` | Multi-part TCP SYN sequence knock. | Raw packet capability; useful when multiple short-window attempts are needed. |
-| `udp` | Single UDP knock over a normal UDP socket. | Yes. | No. | UDP port may appear reachable to scans. |
+| `tcp-syn` | Single TCP SYN-shaped knock. | No. | Raw packet or packet-capture capability on participating platforms. | No UDP port is opened; TCP SYN behavior is platform and firewall dependent. |
+| `tcp-syn-seq` | Multi-part TCP SYN-shaped sequence knock. | No. | Raw packet or packet-capture capability; useful when multiple short-window attempts are required. | Same as `tcp-syn`, plus sequence aggregation. |
+| `udp` | Single UDP knock over a normal UDP socket. | Yes. | No. | UDP knock port may appear reachable to scans. |
 | `udp-seq` | Multi-part UDP sequence knock. | Yes. | No. | Same socket visibility as `udp`; stronger short-window admission signal. |
 | `udp-passive` | UDP knock read through packet capture on the server side. | No. | root, `CAP_NET_RAW`, or pcap/BPF permissions. | With `DropUDPKnockPort`, scans should see DROP behavior while capture still observes traffic. |
 | `udp-passive-seq` | Multi-part UDP sequence read through packet capture on the server side. | No. | root, `CAP_NET_RAW`, or pcap/BPF permissions. | Passive scan behavior plus sequence aggregation. |

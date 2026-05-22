@@ -1,0 +1,19 @@
+{
+  "github.copilot.chat.codeGeneration.instructions": [
+    {
+      "file": "AGENTS.md"
+    },
+    {
+      "file": "llms.txt"
+    },
+    {
+      "file": "docs/llms.md"
+    },
+    {
+      "file": "docs/agents/integration-guide.md"
+    },
+    {
+      "file": "docs/agents/task-matrix.yaml"
+    }
+  ]
+}

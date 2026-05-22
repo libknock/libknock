@@ -19,6 +19,7 @@ This directory contains detailed documentation for embedding, operating, testing
 - [Release checklist](release-checklist.md): repeatable checks before RC and stable releases.
 - [Roadmap](roadmap.md): future validation and engineering work.
 - [Maintenance notes](maintenance.md): internal reuse and duplication boundaries.
+- [LLM and coding-agent notes](llms.md): repository map, vendor model, IDE-assistant pointers, and safety boundaries for coding agents.
 - [Validation template](validation-template.md): template for real host validation evidence.
 - [License and notices](license.md): release license review guidance.
 - [CI](ci.md): workflow and local release gates.

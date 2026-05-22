@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/libknock/libknock/auth"
+	"github.com/libknock/libknock/netx"
 	"github.com/libknock/libknock/observability"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -22,6 +23,7 @@ func TestSinkCollectsEvents(t *testing.T) {
 	sink.OnAccept(remote)
 	sink.OnAuthOK(auth.PeerInfo{PeerIdentity: auth.PeerIdentity{ClientID: "client-a"}, Method: "udp-seq"})
 	sink.OnAuthFail(remote, auth.ErrTimeSkew)
+	sink.OnAuthDrop(observability.NetxAuthDropEvent{Remote: remote, Reason: netx.ErrAuthBackpressure, Pending: 33})
 	sink.OnReplay(remote, 10)
 	sink.OnReplayCacheFull(remote, 10, 63, 64)
 	sink.OnRateLimited(remote)
@@ -40,6 +42,9 @@ func TestSinkCollectsEvents(t *testing.T) {
 	}
 	if got := testutil.ToFloat64(sink.authFail.WithLabelValues("time_skew")); got != 1 {
 		t.Fatalf("authFail = %v", got)
+	}
+	if got := testutil.ToFloat64(sink.authFail.WithLabelValues("auth_backpressure")); got != 1 {
+		t.Fatalf("authDrop fail label = %v", got)
 	}
 	if got := testutil.ToFloat64(sink.authReplay); got != 1 {
 		t.Fatalf("authReplay = %v", got)
@@ -83,10 +88,10 @@ func TestSinkCollectsEvents(t *testing.T) {
 	if got := testutil.ToFloat64(sink.relayError.WithLabelValues("pending_full", "client-a")); got != 1 {
 		t.Fatalf("relay pending_full error = %v", got)
 	}
-	if got := testutil.ToFloat64(sink.relayPendingFull); got != 1 {
+	if got := testutil.ToFloat64(sink.relayPendingFull); got != 2 {
 		t.Fatalf("relayPendingFull = %v", got)
 	}
-	if got := testutil.ToFloat64(sink.relayDropped); got != 1 {
+	if got := testutil.ToFloat64(sink.relayDropped); got != 2 {
 		t.Fatalf("relayDropped = %v", got)
 	}
 	if got := testutil.ToFloat64(sink.relayPending); got != 32 {
@@ -130,6 +135,8 @@ func TestReasonLabelCoversPublicAuthErrors(t *testing.T) {
 		auth.ErrUnsupportedFlags:     "unsupported_flags",
 		auth.ErrSecretResolverFailed: "secret_resolver_failed",
 		auth.ErrTooManyCandidates:    "too_many_candidates",
+		auth.ErrHintModeNoneTooBroad: "hint_mode_none_too_broad",
+		netx.ErrAuthBackpressure:     "auth_backpressure",
 	}
 	for err, want := range tests {
 		if got := reasonLabel(err); got != want {

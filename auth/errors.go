@@ -23,4 +23,5 @@ var (
 	ErrUnsupportedFlags      = errors.New("unsupported flags")
 	ErrSecretResolverFailed  = errors.New("secret resolver failed")
 	ErrTooManyCandidates     = errors.New("too many auth candidates")
+	ErrHintModeNoneTooBroad  = errors.New("envelope v2 hint mode none has too many static candidates")
 )

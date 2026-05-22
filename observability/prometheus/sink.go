@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/libknock/libknock/auth"
+	"github.com/libknock/libknock/netx"
 	"github.com/libknock/libknock/observability"
 	prom "github.com/prometheus/client_golang/prometheus"
 )
@@ -125,6 +126,16 @@ func (s *Sink) OnAuthOK(peer auth.PeerInfo) {
 func (s *Sink) OnAuthFail(_ net.Addr, reason error) {
 	s.authFail.WithLabelValues(reasonLabel(reason)).Inc()
 }
+func (s *Sink) OnAuthDrop(ev observability.NetxAuthDropEvent) {
+	s.authFail.WithLabelValues(reasonLabel(ev.Reason)).Inc()
+	if errors.Is(ev.Reason, netx.ErrAuthBackpressure) {
+		s.relayPendingFull.Inc()
+	}
+	s.relayDropped.Inc()
+	if ev.Pending >= 0 {
+		s.relayPending.Set(float64(ev.Pending))
+	}
+}
 func (s *Sink) OnReplay(net.Addr, uint64) { s.authReplay.Inc() }
 func (s *Sink) OnReplayCacheFull(_ net.Addr, _ uint64, length, capacity int) {
 	s.authReplayFull.Inc()
@@ -231,6 +242,10 @@ func reasonLabel(err error) string {
 		return "secret_resolver_failed"
 	case errors.Is(err, auth.ErrTooManyCandidates):
 		return "too_many_candidates"
+	case errors.Is(err, auth.ErrHintModeNoneTooBroad):
+		return "hint_mode_none_too_broad"
+	case errors.Is(err, netx.ErrAuthBackpressure):
+		return "auth_backpressure"
 	default:
 		return "error"
 	}

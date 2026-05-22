@@ -59,3 +59,7 @@ Validation status is tracked by capability level:
 - not fully validated: documented behavior exists but has not been exercised in this release round on real machines.
 
 This release round does not claim full-machine validation for every firewall backend, Windows path, or macOS passive capture path.
+
+## RC3.2 documentation-pass boundary
+
+rc3.2 documentation scaffolding does not reduce the known validation limits above. In particular, a generated `with-vendor` archive and IDE-assistant guidance improve reviewability, but they are not evidence of real-host firewall behavior, packet-capture driver behavior, long fuzz coverage, or production throughput.

@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.1.0-rc3.2 - 2026-05-22
+
+See [docs/release-notes/v0.1.0-rc3.2.md](docs/release-notes/v0.1.0-rc3.2.md).
+
+### Release scope
+
+- Recovered CI by making the workspace vendor tree available to GitHub Actions and documenting that vendor validation runs from the workspace root with `go.work` enabled.
+- Hardened release scripts: strict duplication scans now fail when `dupl` is missing, and release packaging has a non-git source-tree fallback.
+- Added code-quality guards for shared firewall cleanup, netx auth-backpressure observability, EnvelopeV2 `HintModeNone` candidate validation, TTLLRU length semantics, `NewGateway` config copying, public auth-error labeling, and firewall missing-object matching.
+- Clarified README knock-method support, workspace vendor/LLM guidance, IDE assistant pointers, agent recipes, and validation-update task routing.
+- Added an rc3.2 validation record that separates local release gates from platform-specific target-host validation.
+
+### Validation status
+
+- Full release gate must pass before publishing: vendor-mode test/vet/build, race subset, nested Prometheus/gRPC/examples checks, API/doc/duplication checks, `scripts/check.sh`, `scripts/release-check.sh`, archive packaging, and sha256 verification.
+- Real-host firewall validation, Windows/macOS packet-path validation, long fuzz, and production throughput remain outside current-host claims unless separately recorded.
+
+
 ## v0.1.0-rc3.1 - 2026-05-22
 
 See [docs/release-notes/v0.1.0-rc3.1.md](docs/release-notes/v0.1.0-rc3.1.md).

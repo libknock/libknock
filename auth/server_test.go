@@ -177,6 +177,17 @@ func TestOptionalServerProof(t *testing.T) {
 	}
 }
 
+func TestServerConfigRejectsHintModeNoneWhenStaticCandidatesExceedAttempts(t *testing.T) {
+	secrets := StaticSecrets{}
+	for i := 0; i < DefaultMaxAuthAttempts; i++ {
+		secrets[string(rune('a'+i%26))+string(rune('a'+i/26))] = []byte("0123456789abcdef0123456789abcdef")
+	}
+	err := (ServerConfig{ServerPort: 443, Secrets: secrets, EnvelopeV2: EnvelopeV2Config{HintMode: HintModeNone}}).Validate()
+	if !errors.Is(err, ErrHintModeNoneTooBroad) {
+		t.Fatalf("Validate err = %v, want ErrHintModeNoneTooBroad", err)
+	}
+}
+
 func TestRotatingSecretResolverMatchesCurrentSecret(t *testing.T) {
 	oldSecret := []byte("old-secret-0123456789abcdef")
 	newSecret := []byte("new-secret-0123456789abcdef")

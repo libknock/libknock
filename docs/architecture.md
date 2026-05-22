@@ -30,3 +30,7 @@ On authentication failure, detailed reasons are surfaced to local errors and eve
 ## Workspace and release artifact boundaries
 
 The repository is a Go workspace: the root SDK module, observability module, gRPC integration module, and examples are tied together by `go.work` / `go.work.sum` so local development and CI test the current source tree consistently. Release artifacts are intentionally module-based source packages, not vendored dependency snapshots: `vendor/` is excluded, while workspace metadata stays. Compatibility code, such as legacy SYN sequence namespaces, should stay isolated behind explicit opt-in settings rather than silently expanding the default protocol surface.
+
+## Best-effort cleanup errors
+
+Close paths, failed-auth paths, deadline interruption, and detached firewall cleanup may intentionally ignore `Close` / `SetDeadline` errors after the state transition has already been recorded or cancellation has already been requested. These calls are best-effort resource cleanup and should not mask the primary failure. Business-path mutations, authentication decisions, firewall allow/revoke state, packaging, and release gates must continue to return or log actionable errors.

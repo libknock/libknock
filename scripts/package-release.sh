@@ -14,6 +14,10 @@ usage: scripts/package-release.sh [--with-vendor|--standard-only|--with-vendor-o
 Default behavior is --with-vendor: create both libknock-VERSION.zip and
 libknock-VERSION-with-vendor.zip. The standard archive excludes vendor/. The
 vendored archive runs go work vendor and includes vendor/modules.txt.
+
+When run from a git checkout the script packages HEAD with git archive. In a
+plain source tree without .git it falls back to the current working tree and
+excludes VCS/build/transient paths.
 EOF
     exit 0
     ;;
@@ -31,12 +35,27 @@ normalize_archive_tree() {
   find "$dir" -type f -exec chmod 644 {} +
   find "$dir/scripts" -type f -name '*.sh' -exec chmod 755 {} + 2>/dev/null || true
 }
+copy_source_tree() {
+  local dest=$1
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git archive --format=tar HEAD | tar -C "$dest" -xf -
+    return
+  fi
+  tar \
+    --exclude='./.git' \
+    --exclude='./dist' \
+    --exclude='./vendor' \
+    --exclude='./tmp' \
+    --exclude='./*.zip' \
+    --exclude='./*.sha256' \
+    -cf - . | tar -C "$dest" -xf -
+}
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 if [[ "$mode" == standard || "$mode" == both ]]; then
   mkdir -p "$tmp/$base"
-  git archive --format=tar HEAD | tar -C "$tmp/$base" -xf -
+  copy_source_tree "$tmp/$base"
   rm -rf "$tmp/$base/vendor"
   normalize_archive_tree "$tmp/$base"
   (cd "$tmp" && zip -qr "$standard_out" "$base")
@@ -48,7 +67,7 @@ fi
 
 if [[ "$mode" == vendor || "$mode" == both ]]; then
   mkdir -p "$tmp/$base"
-  git archive --format=tar HEAD | tar -C "$tmp/$base" -xf -
+  copy_source_tree "$tmp/$base"
   (
     cd "$tmp/$base"
     go work vendor

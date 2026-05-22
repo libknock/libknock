@@ -418,7 +418,7 @@ func policyKey(addr net.Addr) string {
 }
 
 func publicError(err error) error {
-	if errors.Is(err, ErrNilConn) || errors.Is(err, ErrInvalidFrame) || errors.Is(err, ErrFrameTooLarge) || errors.Is(err, ErrUnknownClient) || errors.Is(err, ErrAuthFailed) || errors.Is(err, ErrReplayDetected) || errors.Is(err, ErrTimeSkew) || errors.Is(err, ErrKnockRequired) || errors.Is(err, ErrUnsupportedVersion) || errors.Is(err, ErrUnsupportedFlags) || errors.Is(err, ErrSecretResolverFailed) || errors.Is(err, ErrRateLimited) || errors.Is(err, ErrServerProofRequired) || errors.Is(err, ErrServerProofFailed) || errors.Is(err, ErrTooManyCandidates) {
+	if errors.Is(err, ErrNilConn) || errors.Is(err, ErrInvalidFrame) || errors.Is(err, ErrFrameTooLarge) || errors.Is(err, ErrUnknownClient) || errors.Is(err, ErrAuthFailed) || errors.Is(err, ErrReplayDetected) || errors.Is(err, ErrTimeSkew) || errors.Is(err, ErrKnockRequired) || errors.Is(err, ErrUnsupportedVersion) || errors.Is(err, ErrUnsupportedFlags) || errors.Is(err, ErrSecretResolverFailed) || errors.Is(err, ErrRateLimited) || errors.Is(err, ErrServerProofRequired) || errors.Is(err, ErrServerProofFailed) || errors.Is(err, ErrTooManyCandidates) || errors.Is(err, ErrHintModeNoneTooBroad) {
 		return err
 	}
 	return ErrAuthFailed

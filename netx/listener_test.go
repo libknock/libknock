@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -226,6 +227,58 @@ func (l *closeRecordingListener) Close() error {
 }
 func (l *closeRecordingListener) Addr() net.Addr {
 	return &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 443}
+}
+
+func TestAuthenticatedListenerReportsBackpressureDrop(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	raw := &closeRecordingListener{conn: make(chan net.Conn, 3), closed: make(chan struct{}), err: net.ErrClosed}
+	events := &authDropRecorder{ch: make(chan authDropEvent, 1)}
+	wrapped, err := WrapListenerWithConfigE(raw, ListenerConfig{Auth: auth.ServerConfig{ServerPort: 443, Secrets: auth.StaticSecrets{"client": secret}, AuthTimeout: 5 * time.Second}, MaxPendingAuth: 1, MaxAuthWorkers: 1, Events: events})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer wrapped.Close()
+	server1, client1 := net.Pipe()
+	defer client1.Close()
+	raw.conn <- server1
+	time.Sleep(50 * time.Millisecond)
+	server2, client2 := net.Pipe()
+	defer client2.Close()
+	raw.conn <- server2
+	server3, client3 := net.Pipe()
+	defer client3.Close()
+	raw.conn <- server3
+	select {
+	case ev := <-events.ch:
+		if !errors.Is(ev.reason, ErrAuthBackpressure) {
+			t.Fatalf("drop reason = %v", ev.reason)
+		}
+		if ev.pending < 0 {
+			t.Fatalf("pending = %d", ev.pending)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("missing backpressure drop event")
+	}
+}
+
+type authDropEvent struct {
+	remote  net.Addr
+	reason  error
+	pending int
+}
+
+type authDropRecorder struct {
+	mu sync.Mutex
+	ch chan authDropEvent
+}
+
+func (r *authDropRecorder) OnAuthDrop(remote net.Addr, reason error, pending int) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	select {
+	case r.ch <- authDropEvent{remote: remote, reason: reason, pending: pending}:
+	default:
+	}
 }
 
 func TestAuthenticatedListenerCloseAfterAcceptErrorInterruptsInFlightAuth(t *testing.T) {

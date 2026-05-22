@@ -470,7 +470,7 @@ func isMissingFirewallObject(err error) bool {
 	if strings.Contains(s, "no chain/target/match by that name") || strings.Contains(s, "permission denied") {
 		return false
 	}
-	return strings.Contains(s, "does not exist") || strings.Contains(s, "no such file or directory") || strings.Contains(s, "not in set") || strings.Contains(s, "no such table") || strings.Contains(s, "it's not added") || strings.Contains(s, "bad rule (does a matching rule exist")
+	return strings.Contains(s, "does not exist") || strings.Contains(s, "no such file or directory") || strings.Contains(s, "not in the set") || strings.Contains(s, "not in set") || strings.Contains(s, "no such table") || strings.Contains(s, "it's not added") || strings.Contains(s, "bad rule (does a matching rule exist")
 }
 
 func ttlSeconds(ttl time.Duration) (int, error) {

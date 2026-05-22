@@ -17,3 +17,7 @@ Status values:
 
 
 Evidence levels are documented separately in the validation matrix. Treat active UDP as the cross-platform baseline; TCP SYN, passive capture, Linux firewall mutation, Windows driver paths, and macOS BPF/pcap paths are platform-specific until validated on the target host.
+
+## RC3.2 note
+
+rc3.2 does not change platform support. It is a documentation and release-scaffolding pass unless a later validation record explicitly adds host evidence. Continue to treat Linux firewall mutation, passive UDP capture, TCP SYN methods, Windows packet drivers, and macOS BPF/pcap as target-host validation items.

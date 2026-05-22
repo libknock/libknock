@@ -144,36 +144,10 @@ func (i *Iptables) initCommand(ctx context.Context, cmd, port, udpPort string) e
 	return runIptables(ctx, i.cfg, cmd, "-A", i.chain, "-p", "tcp", "--dport", port, "-j", "DROP")
 }
 
-const maxCleanupDeletes = 1000
-
 func (i *Iptables) cleanupCommand(ctx context.Context, cmd, port, udpPort string) error {
-	var err error
-	if i.cfg.DropUDPKnockPort {
-		udpArgs := []string{"-p", "udp", "--dport", udpPort, "-m", "comment", "--comment", "knockgate udp-passive", "-j", "DROP"}
-		for range maxCleanupDeletes {
-			if deleteErr := runIptables(ctx, i.cfg, cmd, append([]string{"-D", "INPUT"}, udpArgs...)...); deleteErr != nil {
-				if !isMissingFirewallObject(deleteErr) {
-					err = errors.Join(err, deleteErr)
-				}
-				break
-			}
-		}
-	}
-	for range maxCleanupDeletes {
-		if deleteErr := runIptables(ctx, i.cfg, cmd, "-D", "INPUT", "-p", "tcp", "--dport", port, "-j", i.chain); deleteErr != nil {
-			if !isMissingFirewallObject(deleteErr) {
-				err = errors.Join(err, deleteErr)
-			}
-			break
-		}
-	}
-	err = errors.Join(err, ignoreMissingFirewallObject(runIptables(ctx, i.cfg, cmd, "-F", i.chain)))
-	err = errors.Join(err, ignoreMissingFirewallObject(runIptables(ctx, i.cfg, cmd, "-X", i.chain)))
-	return err
+	return cleanupIptablesRules(ctx, iptablesCleanupConfig{FirewallConfig: i.cfg, Chain: i.chain, Command: cmd, TCPPort: port, UDPPort: udpPort})
 }
 
 func (i *Iptables) cleanupDetached() error {
-	cleanupCtx, cancel := context.WithTimeout(context.Background(), defaultCommandTimeout)
-	defer cancel()
-	return i.Cleanup(cleanupCtx)
+	return cleanupBackendDetached(i.Cleanup)
 }
