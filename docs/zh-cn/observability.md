@@ -10,6 +10,7 @@ type EventSink interface {
     OnAuthOK(peer PeerInfo)
     OnAuthFail(remote net.Addr, reason error)
     OnReplay(remote net.Addr, peerHint uint64)
+    OnReplayCacheFull(remote net.Addr, peerHint uint64, length, capacity int)
     OnRateLimited(remote net.Addr)
 }
 ```

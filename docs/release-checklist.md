@@ -35,6 +35,8 @@ go test -race -count=1 ./auth ./firewall ./gate ./knock ./netx ./policy ./protoc
 ```sh
 go -C observability/prometheus test -count=1 ./...
 go -C observability/prometheus vet ./...
+go list -m all | grep 'github.com/libknock/libknock <VERSION>'
+go -C observability/prometheus list -m all | grep 'github.com/libknock/libknock <VERSION>'
 go -C test/integration/grpc test -count=1 ./...
 go -C test/integration/grpc vet ./...
 go test -count=1 ./examples/grpc-client/... ./examples/grpc-server/...
@@ -172,7 +174,7 @@ For source archives:
 Minimal archive audit commands:
 
 ```sh
-version=v0.1.0-rc2.6
+version=<VERSION>
 zipinfo -1 "dist/libknock-${version}.zip" | grep -Ev "^libknock-${version}/" && exit 1 || true
 zipinfo -1 "dist/libknock-${version}.zip" | grep -E "(^/|(^|/)\.\./)" && exit 1 || true
 zipinfo -1 "dist/libknock-${version}.zip" | grep -q "^libknock-${version}/vendor/" && exit 1 || true
@@ -182,7 +184,22 @@ sha256sum -c "dist/libknock-${version}-with-vendor.zip.sha256"
 ```
 
 
-## 11. Release decision
+## 11. Not run / Reason / Risk / Follow-up
+
+Record environment-limited checks as formal release data instead of verbal caveats. At minimum, fill this table in the release notes or `docs/validation/<VERSION>.md`:
+
+| Area | Status | Reason | Risk | Follow-up |
+| --- | --- | --- | --- | --- |
+| nftables real-host mutation | not run / tested |  |  |  |
+| iptables real-host mutation | not run / tested |  |  |  |
+| ipset-iptables real-host mutation | not run / tested |  |  |  |
+| UDP passive DROP behavior | not run / tested |  |  |  |
+| Windows WinDivert/Npcap | not run / tested |  |  |  |
+| macOS BPF/pcap | not run / tested |  |  |  |
+| long fuzz | not run / tested |  |  |  |
+| production throughput | not run / tested |  |  |  |
+
+## 12. Release decision
 
 Recommended threshold for RC:
 

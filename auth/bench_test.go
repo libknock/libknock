@@ -11,3 +11,32 @@ func BenchmarkReplayCacheCheckAndMark(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkOnAuthenticatedCallback(b *testing.B) {
+	cb := func(PeerInfo) {}
+	peer := PeerInfo{PeerIdentity: PeerIdentity{ClientID: "client"}}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		cb(peer)
+	}
+}
+
+func BenchmarkOnAuthenticatedBoundedQueue(b *testing.B) {
+	ch := make(chan PeerInfo, 1024)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for range ch {
+		}
+	}()
+	peer := PeerInfo{PeerIdentity: PeerIdentity{ClientID: "client"}}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		select {
+		case ch <- peer:
+		default:
+		}
+	}
+	close(ch)
+	<-done
+}

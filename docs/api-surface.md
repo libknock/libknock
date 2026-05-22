@@ -43,7 +43,34 @@ WrapListener
 WrapListenerE
 ```
 
-Run `scripts/check-api.sh` before release to catch accidental removal of stable root exports.
+Run `scripts/check-api.sh` before release to catch accidental removal of stable root exports. It now compares the signature-level snapshot below so function signatures, interface method sets, exported struct fields, and const/var declarations cannot drift silently.
+
+```api-signature-snapshot root
+const MinSecretSize = auth.MinSecretSize
+func ClientAuth(ctx context.Context, conn net.Conn, cfg ClientConfig) error
+func NewListener(ln net.Listener, cfg ServerConfig) (net.Listener, error)
+func NewMemoryReplayCache(ttl time.Duration) *auth.MemoryReplayCache
+func NewServer(cfg ServerConfig) (*Server, error)
+func NewStaticSecretResolver(secrets map[string][]byte) auth.StaticSecrets
+func ServerAuth(ctx context.Context, conn net.Conn, cfg ServerConfig) (net.Conn, *PeerInfo, error)
+func WrapListener(ln net.Listener, cfg ServerConfig) net.Listener
+func WrapListenerE(ln net.Listener, cfg ServerConfig) (net.Listener, error)
+type ClientConfig auth.ClientConfig
+type Dialer netx.Dialer
+type EventSink auth.EventSink
+type FrameMeta auth.FrameMeta
+type KnockSender auth.KnockSender
+type KnockSessionStore auth.KnockSessionStore
+type PeerIdentity auth.PeerIdentity
+type PeerInfo auth.PeerInfo
+type Policy auth.Policy
+type ReplayCache auth.ReplayCache
+type SecretCandidate auth.SecretCandidate
+type SecretResolver auth.SecretResolver
+type Server auth.Server
+type ServerConfig auth.ServerConfig
+type SessionBoundKnockSender auth.SessionBoundKnockSender
+```
 
 ## Stable advanced auth package
 

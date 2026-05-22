@@ -121,6 +121,14 @@ type ReplayCache interface {
 	CheckAndMark(clientID string, nonce []byte) error
 }
 
+// ReplayCacheStats exposes low-cardinality replay-cache capacity data for
+// observability adapters. Implementations should keep these methods cheap; the
+// built-in cache updates its active count during normal mutations.
+type ReplayCacheStats interface {
+	Len() int
+	Cap() int
+}
+
 type PeerInfoProvider interface {
 	PeerInfo() PeerInfo
 }
@@ -149,6 +157,7 @@ type EventSink interface {
 	OnAuthOK(peer PeerInfo)
 	OnAuthFail(remote net.Addr, reason error)
 	OnReplay(remote net.Addr, peerHint uint64)
+	OnReplayCacheFull(remote net.Addr, peerHint uint64, length, capacity int)
 	OnRateLimited(remote net.Addr)
 }
 

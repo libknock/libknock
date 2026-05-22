@@ -154,14 +154,14 @@ The frame carries authenticated metadata such as client identity hash, method, t
 
 ## Knock method support
 
-| Method | Summary | Typical requirements |
-| --- | --- | --- |
+| Method | Summary | Binds UDP socket | Extra privilege | Scan behavior |
+| --- | --- | --- | --- | --- |
 | `tcp-syn` | Single TCP SYN knock. | Raw packet capability on sender/listener platforms. |
 | `tcp-syn-seq` | Multi-part TCP SYN sequence knock. | Raw packet capability; useful when multiple short-window attempts are needed. |
-| `udp` | Single UDP knock over a normal UDP socket. | Standard UDP socket. |
-| `udp-seq` | Multi-part UDP sequence knock. | Standard UDP socket. |
-| `udp-passive` | UDP knock read through packet capture on the server side. | Packet capture privileges on the server platform. |
-| `udp-passive-seq` | Multi-part UDP sequence read through packet capture on the server side. | Packet capture privileges on the server platform. |
+| `udp` | Single UDP knock over a normal UDP socket. | Yes. | No. | UDP port may appear reachable to scans. |
+| `udp-seq` | Multi-part UDP sequence knock. | Yes. | No. | Same socket visibility as `udp`; stronger short-window admission signal. |
+| `udp-passive` | UDP knock read through packet capture on the server side. | No. | root, `CAP_NET_RAW`, or pcap/BPF permissions. | With `DropUDPKnockPort`, scans should see DROP behavior while capture still observes traffic. |
+| `udp-passive-seq` | Multi-part UDP sequence read through packet capture on the server side. | No. | root, `CAP_NET_RAW`, or pcap/BPF permissions. | Passive scan behavior plus sequence aggregation. |
 
 For most deployments, start with UDP knock before considering passive or raw-packet methods.
 

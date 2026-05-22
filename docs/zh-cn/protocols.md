@@ -6,7 +6,7 @@
 2. TCP 认证协议 v2：`tcp-auth-envelope-v2`
 3. UDP knock 帧 v1
 
-三者都使用已认证的加密成帧和有界输入大小。默认 AEAD 是 ChaCha20-Poly1305。HKDF-SHA256 用于帧特定的密钥派生。
+三者都使用已认证的加密成帧和有界输入大小。默认 AEAD 是 XChaCha20-Poly1305。HKDF-SHA256 用于帧特定的密钥派生。
 
 ## TCP 认证协议 v1
 

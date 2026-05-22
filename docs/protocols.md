@@ -6,7 +6,7 @@
 2. TCP auth protocol v2: `tcp-auth-envelope-v2`
 3. UDP knock frame v1
 
-All three use authenticated cryptographic framing and bounded input sizes. The default AEAD is ChaCha20-Poly1305. HKDF-SHA256 is used for frame-specific key derivation.
+All three use authenticated cryptographic framing and bounded input sizes. The default AEAD is XChaCha20-Poly1305. HKDF-SHA256 is used for frame-specific key derivation.
 
 ## TCP auth protocol v1
 
@@ -37,7 +37,7 @@ Properties:
 - Unknown TCP flags are rejected.
 - The currently valid TCP flag is `FlagServerProof`.
 
-Client identity is represented by `client_id_hash` inside the sealed payload. The server maps the verified hash back to the resolved client identity. Frame v1 uses `nonce || key_hint` as the XChaCha20-Poly1305 nonce and also authenticates `key_hint` in AAD; this is retained as wire-compatible v1 behavior and must not be changed in v0.1.x release candidates.
+Client identity is represented by `client_id_hash` inside the sealed payload. The server maps the verified hash back to the resolved client identity. Frame v1 uses `nonce || key_hint` as the XChaCha20-Poly1305 nonce and also authenticates `key_hint` in AAD. The duplicated `key_hint` role is legacy compatibility, not a new design pattern; keep it unchanged in v0.1.x and clean it only in a future wire version with migration notes.
 
 ## TCP auth protocol v2
 

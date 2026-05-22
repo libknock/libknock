@@ -270,6 +270,7 @@ type EventSink interface {
     OnAuthOK(peer PeerInfo)
     OnAuthFail(remote net.Addr, reason error)
     OnReplay(remote net.Addr, peerHint uint64)
+    OnReplayCacheFull(remote net.Addr, peerHint uint64, length, capacity int)
     OnRateLimited(remote net.Addr)
 }
 ```
@@ -305,3 +306,11 @@ g, err := gate.New(gate.Config{
     KnockClients: []knock.ClientSecret{{ClientID: "client-001", Secret: secret}},
 })
 ```
+
+## Gate configuration names
+
+`gate.Config.KnockMethod` selects the knock admission method (`udp`, `udp-seq`, and active listener methods supported by `gate`). `auth.ServerConfig.Protocol` / `auth.ClientConfig.Protocol` select the TCP authentication frame protocol (`tcp-auth-frame-v1` or `tcp-auth-envelope-v2`). Keep these fields separate: knock method controls pre-auth admission; auth protocol controls the TCP authentication frame.
+
+## Relay construction
+
+New relay integrations should prefer `relay.NewGateway(relay.Config{...})` over constructing `relay.Gateway` public fields directly. Public fields remain for v0.1.x compatibility, but `Config.WithDefaults()` centralizes safe defaults for firewall, TTL, upstream timeout, and auth worker queue sizes.

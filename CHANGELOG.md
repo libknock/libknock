@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.0-rc3 - 2026-05-22
+
+See [docs/release-notes/v0.1.0-rc3.md](docs/release-notes/v0.1.0-rc3.md).
+
+
 ## v0.1.0-rc2.6 - 2026-05-20
 
 ### Release scope

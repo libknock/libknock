@@ -49,7 +49,7 @@ func (g *Gateway) listenKnock(ctx context.Context, fw firewall.Backend, store *K
 		timers.AfterFunc(ttl, func() {
 			store.Expire(remote, ev.ClientID, time.Now())
 			if store.ExpireFirewall(remote, port, leaseID, time.Now()) && gatewaycore.ShouldManualRevoke(fw) {
-				gatewaycore.RevokeFirewall(ctx, fw, remote, port, g.Events)
+				_ = gatewaycore.RevokeFirewall(ctx, fw, remote, port, g.Events)
 			}
 		})
 	}

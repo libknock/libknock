@@ -4,9 +4,12 @@ Purpose: Embeddable TCP pre-application authentication SDK for Go applications.
 Read first:
 - docs/agents/AGENTS.md
 - docs/agents/integration-guide.md
+- COMPATIBILITY.md
+- MIGRATION.md
 - docs/getting-started.md
 - docs/api.md
 - docs/api-surface.md
+- docs/agents/task-matrix.yaml
 - docs/modes.md
 
 Normal integration:
@@ -48,6 +51,7 @@ Docs to update when API changes:
 - README.md
 - docs/api.md
 - docs/api-surface.md
+- docs/agents/task-matrix.yaml
 - COMPATIBILITY.md
 - docs/zh-cn/api.md
 

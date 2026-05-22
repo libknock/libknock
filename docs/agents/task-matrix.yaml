@@ -1,0 +1,38 @@
+version: v0.1.0-rc3
+rules:
+  - task: normal_tcp_integration
+    allowed_files: ["examples/**", "docs/getting-started.md", "docs/api.md", "docs/agents/recipes/tcp-listener.md"]
+    forbidden_files: ["protocol/**", "internal/**", "cmd/knock-proxy/**"]
+    stable_apis: ["libknock.NewListener", "libknock.Dialer", "libknock.ServerConfig", "libknock.ClientConfig"]
+    required_tests: ["go test ./...", "go build ./examples/tcp-echo-client ./examples/tcp-echo-server"]
+    docs_to_update: ["docs/api.md", "docs/api-surface.md"]
+  - task: wire_format_or_crypto
+    allowed_files: ["protocol/**", "auth/**", "docs/protocols.md", "MIGRATION.md", "COMPATIBILITY.md"]
+    forbidden_files: ["cmd/knock-proxy/**"]
+    stable_apis: ["protocol.BuildEnvelopeV2", "protocol.OpenEnvelopeV2Payload", "auth.ClientConfig", "auth.ServerConfig"]
+    required_tests: ["go test ./protocol ./auth", "scripts/check-api.sh", "go test ./protocol -run=^$ -fuzz=FuzzEnvelopeV2Open -fuzztime=60s"]
+    docs_to_update: ["docs/protocols.md", "MIGRATION.md", "COMPATIBILITY.md", "docs/api-surface.md"]
+  - task: firewall_or_platform
+    allowed_files: ["firewall/**", "gate/**", "relay/**", "knock/**", "docs/firewall.md", "docs/platform-support.md", "docs/validation-matrix.md"]
+    forbidden_files: ["protocol/**"]
+    stable_apis: ["firewall.Backend", "gate.Config", "relay.Config"]
+    required_tests: ["go test ./firewall ./gate ./relay ./knock", "go test -race ./firewall ./gate ./relay ./knock"]
+    docs_to_update: ["docs/firewall.md", "docs/known-limitations.md", "docs/platform-support.md"]
+  - task: observability
+    allowed_files: ["observability/**", "auth/**", "relay/**", "docs/observability.md", "docs/operations.md"]
+    forbidden_files: ["protocol/**"]
+    stable_apis: ["observability.EventSink", "auth.EventSink", "relay.EventSink"]
+    required_tests: ["go test ./observability/... ./auth ./relay", "go -C observability/prometheus test ./..."]
+    docs_to_update: ["docs/observability.md", "docs/operations.md", "docs/api.md"]
+  - task: examples_only
+    allowed_files: ["examples/**", "docs/agents/recipes/**"]
+    forbidden_files: ["protocol/**", "auth/**", "firewall/**", "gate/**", "relay/**", "knock/**", "internal/**"]
+    stable_apis: ["libknock.NewListener", "libknock.Dialer"]
+    required_tests: ["go build ./examples/tcp-echo-client ./examples/tcp-echo-server ./examples/tls-client ./examples/tls-server", "go test ./examples/grpc-client/... ./examples/grpc-server/..."]
+    docs_to_update: ["examples/README.md", "docs/agents/recipes/*"]
+  - task: release_packaging
+    allowed_files: ["CHANGELOG.md", "docs/release-*", "docs/validation-*", "scripts/**", "COMPATIBILITY.md", "llms.txt"]
+    forbidden_files: ["protocol/**", "auth/**", "firewall/**", "gate/**", "relay/**", "knock/**"]
+    stable_apis: ["root api snapshot in docs/api-surface.md"]
+    required_tests: ["scripts/release-check.sh", "scripts/check-api.sh", "scripts/package-release.sh --with-vendor <VERSION> dist/"]
+    docs_to_update: ["CHANGELOG.md", "docs/release-notes.md", "docs/release-checklist.md"]

@@ -33,3 +33,16 @@ Command:    exact go test -bench command
 ## Interpretation
 
 Benchmarks isolate library-level operations. They do not include Internet latency, kernel firewall update cost on every platform, packet capture driver overhead, or application protocol work after authentication. Treat results as regression signals first and capacity-planning inputs only after validating on the target deployment host.
+
+## rc3 microbenchmark baseline
+
+Environment-limited baseline captured during `v0.1.0-rc3` preparation:
+
+```text
+Go version: go1.24.10 linux/arm64
+OS/arch:    Linux 6.1.0-47-arm64 arm64
+Command:    go test -run=^$ -bench='Benchmark(EnvelopeV2OpenWithRouteHint|EnvelopeV2OpenWithHintNoneManyCandidates|ReplayCacheCheckAndMark|KnockFrameBuildOpen|SequenceTracker)' -benchtime=100x ./auth ./protocol ./knock
+Scope:      microbenchmarks only; no production throughput claim.
+```
+
+Record benchstat output in release notes when comparing this baseline against future commits. Do not extrapolate these numbers to firewall mutation throughput, passive-capture overhead, or Internet latency without target-host measurements.

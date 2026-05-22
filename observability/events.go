@@ -15,6 +15,7 @@ type AuthEvents interface {
 	OnAuthOK(peer auth.PeerInfo)
 	OnAuthFail(remote net.Addr, reason error)
 	OnReplay(remote net.Addr, peerHint uint64)
+	OnReplayCacheFull(remote net.Addr, peerHint uint64, length, capacity int)
 	OnRateLimited(remote net.Addr)
 }
 
@@ -54,10 +55,12 @@ type RelayEvent struct {
 }
 
 type RelayErrorEvent struct {
-	Remote   net.Addr
-	ClientID string
-	Stage    string
-	Err      error
+	Remote       net.Addr
+	ClientID     string
+	Stage        string
+	Err          error
+	DroppedCount int64
+	Pending      int
 }
 
 type GatewayEvents interface {
@@ -76,14 +79,15 @@ type EventSink interface {
 
 type Nop struct{}
 
-func (Nop) OnAccept(net.Addr)                  {}
-func (Nop) OnAuthOK(auth.PeerInfo)             {}
-func (Nop) OnAuthFail(net.Addr, error)         {}
-func (Nop) OnReplay(net.Addr, uint64)          {}
-func (Nop) OnRateLimited(net.Addr)             {}
-func (Nop) OnKnockOK(KnockEvent)               {}
-func (Nop) OnKnockFail(KnockFailEvent)         {}
-func (Nop) OnFirewallAllow(FirewallEvent)      {}
-func (Nop) OnFirewallError(FirewallErrorEvent) {}
-func (Nop) OnRelayOK(RelayEvent)               {}
-func (Nop) OnRelayError(RelayErrorEvent)       {}
+func (Nop) OnAccept(net.Addr)                            {}
+func (Nop) OnAuthOK(auth.PeerInfo)                       {}
+func (Nop) OnAuthFail(net.Addr, error)                   {}
+func (Nop) OnReplay(net.Addr, uint64)                    {}
+func (Nop) OnReplayCacheFull(net.Addr, uint64, int, int) {}
+func (Nop) OnRateLimited(net.Addr)                       {}
+func (Nop) OnKnockOK(KnockEvent)                         {}
+func (Nop) OnKnockFail(KnockFailEvent)                   {}
+func (Nop) OnFirewallAllow(FirewallEvent)                {}
+func (Nop) OnFirewallError(FirewallErrorEvent)           {}
+func (Nop) OnRelayOK(RelayEvent)                         {}
+func (Nop) OnRelayError(RelayErrorEvent)                 {}

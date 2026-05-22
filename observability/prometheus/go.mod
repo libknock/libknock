@@ -3,7 +3,7 @@ module github.com/libknock/libknock/observability/prometheus
 go 1.24.0
 
 require (
-	github.com/libknock/libknock v0.1.0-rc2.6
+	github.com/libknock/libknock v0.1.0-rc3
 	github.com/prometheus/client_golang v1.23.2
 )
 
@@ -21,3 +21,5 @@ require (
 	golang.org/x/sys v0.41.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 )
+
+replace github.com/libknock/libknock => ../..

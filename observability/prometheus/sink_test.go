@@ -23,6 +23,7 @@ func TestSinkCollectsEvents(t *testing.T) {
 	sink.OnAuthOK(auth.PeerInfo{PeerIdentity: auth.PeerIdentity{ClientID: "client-a"}, Method: "udp-seq"})
 	sink.OnAuthFail(remote, auth.ErrTimeSkew)
 	sink.OnReplay(remote, 10)
+	sink.OnReplayCacheFull(remote, 10, 63, 64)
 	sink.OnRateLimited(remote)
 	sink.OnKnockOK(observability.KnockEvent{ClientID: "client-a", Method: "udp-seq"})
 	sink.OnKnockFail(observability.KnockFailEvent{ClientID: "client-a", Reason: "bad_mac"})
@@ -30,6 +31,7 @@ func TestSinkCollectsEvents(t *testing.T) {
 	sink.OnFirewallError(observability.FirewallErrorEvent{})
 	sink.OnRelayOK(observability.RelayEvent{ClientID: "client-a", RX: 7, TX: 11, Duration: 200 * time.Millisecond})
 	sink.OnRelayError(observability.RelayErrorEvent{ClientID: "client-a", Stage: "upstream"})
+	sink.OnRelayError(observability.RelayErrorEvent{ClientID: "client-a", Stage: "pending_full", DroppedCount: 1, Pending: 32})
 	if got := testutil.ToFloat64(sink.authAccept); got != 1 {
 		t.Fatalf("authAccept = %v", got)
 	}
@@ -41,6 +43,15 @@ func TestSinkCollectsEvents(t *testing.T) {
 	}
 	if got := testutil.ToFloat64(sink.authReplay); got != 1 {
 		t.Fatalf("authReplay = %v", got)
+	}
+	if got := testutil.ToFloat64(sink.authReplayFull); got != 1 {
+		t.Fatalf("authReplayFull = %v", got)
+	}
+	if got := testutil.ToFloat64(sink.replayCacheLen); got != 63 {
+		t.Fatalf("replayCacheLen = %v", got)
+	}
+	if got := testutil.ToFloat64(sink.replayCacheCap); got != 64 {
+		t.Fatalf("replayCacheCap = %v", got)
 	}
 	if got := testutil.ToFloat64(sink.authRateLimited); got != 1 {
 		t.Fatalf("authRateLimited = %v", got)
@@ -68,6 +79,18 @@ func TestSinkCollectsEvents(t *testing.T) {
 	}
 	if got := testutil.ToFloat64(sink.relayError.WithLabelValues("upstream", "client-a")); got != 1 {
 		t.Fatalf("relayError = %v", got)
+	}
+	if got := testutil.ToFloat64(sink.relayError.WithLabelValues("pending_full", "client-a")); got != 1 {
+		t.Fatalf("relay pending_full error = %v", got)
+	}
+	if got := testutil.ToFloat64(sink.relayPendingFull); got != 1 {
+		t.Fatalf("relayPendingFull = %v", got)
+	}
+	if got := testutil.ToFloat64(sink.relayDropped); got != 1 {
+		t.Fatalf("relayDropped = %v", got)
+	}
+	if got := testutil.ToFloat64(sink.relayPending); got != 32 {
+		t.Fatalf("relayPending = %v", got)
 	}
 	if _, err := reg.Gather(); err != nil {
 		t.Fatal(err)

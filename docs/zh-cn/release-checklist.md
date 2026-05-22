@@ -153,7 +153,7 @@ done
 最小归档审计命令：
 
 ```sh
-version=v0.1.0-rc2.6
+version=<VERSION>
 zipinfo -1 "dist/libknock-${version}.zip" | grep -Ev "^libknock-${version}/" && exit 1 || true
 zipinfo -1 "dist/libknock-${version}.zip" | grep -E "(^/|(^|/)\.\./)" && exit 1 || true
 zipinfo -1 "dist/libknock-${version}.zip" | grep -q "^libknock-${version}/vendor/" && exit 1 || true
@@ -202,3 +202,7 @@ go test -mod=vendor ./observability/prometheus/...
 go test -mod=vendor ./test/integration/grpc/...
 go test -mod=vendor ./examples/grpc-client/... ./examples/grpc-server/...
 ```
+
+## 未运行 / 原因 / 风险 / 后续
+
+发布说明必须正式记录未运行项，例如 nftables/iptables/ipset 真机验证、UDP passive DROP、Windows WinDivert/Npcap、macOS BPF/pcap、长时间 fuzz、生产吞吐基线。不要把环境限制只写在口头说明里。

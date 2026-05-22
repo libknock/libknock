@@ -276,8 +276,14 @@ func validatePeerCommon(cfg ServerConfig, peer *PeerInfo, serverPort int, remote
 		return ErrTimeSkew
 	}
 	if err := cfg.ReplayCache.CheckAndMark(peer.ClientID, peer.Nonce); err != nil {
-		if errors.Is(err, ErrReplayDetected) && cfg.Events != nil {
-			cfg.Events.OnReplay(remote, hint)
+		if cfg.Events != nil {
+			switch {
+			case errors.Is(err, ErrReplayDetected):
+				cfg.Events.OnReplay(remote, hint)
+			case errors.Is(err, ErrReplayCacheFull):
+				length, capacity := replayCacheStats(cfg.ReplayCache)
+				cfg.Events.OnReplayCacheFull(remote, hint, length, capacity)
+			}
 		}
 		return err
 	}
@@ -432,4 +438,12 @@ func mapProtocolError(err error) error {
 		return ErrInvalidFrame
 	}
 	return err
+}
+
+func replayCacheStats(cache ReplayCache) (int, int) {
+	stats, ok := cache.(ReplayCacheStats)
+	if !ok {
+		return 0, 0
+	}
+	return stats.Len(), stats.Cap()
 }

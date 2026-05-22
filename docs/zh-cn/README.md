@@ -66,3 +66,9 @@ conn, err = (&libknock.Dialer{Base: baseDialer, Config: clientConfig}).DialConte
 - [Integration guide](../agents/integration-guide.md)
 - [Anti-patterns](../agents/anti-patterns.md)
 - [Recipes](../agents/recipes/)
+
+## 中文 Agent 快速入口
+
+- [AGENTS.md](AGENTS.md)：中文 LLM/Agent 集成边界。
+- [anti-patterns.md](anti-patterns.md)：常见错误模式。
+- [../agents/task-matrix.yaml](../agents/task-matrix.yaml)：机器可读任务矩阵。

@@ -19,6 +19,7 @@ type MemoryReplayCache struct {
 	nextSweep  time.Time
 	maxEntries int
 	entries    *cache.TTLLRU[string, struct{}]
+	active     int
 }
 
 func NewMemoryReplayCache(ttl time.Duration) *MemoryReplayCache {
@@ -49,14 +50,14 @@ func (c *MemoryReplayCache) CheckAndMark(clientID string, nonce []byte) error {
 	if c.nextSweep.IsZero() {
 		c.nextSweep = now.Add(c.sweepEvery)
 	} else if !now.Before(c.nextSweep) {
-		c.entries.Sweep(now)
+		c.sweepLocked(now)
 		c.nextSweep = now.Add(c.sweepEvery)
 	}
-	if c.entries.ActiveLen(now) >= c.maxEntries {
-		c.entries.Sweep(now)
+	if c.active >= c.maxEntries {
+		c.sweepLocked(now)
 		c.nextSweep = now.Add(c.sweepEvery)
 	}
-	if c.entries.ActiveLen(now) >= c.maxEntries {
+	if c.active >= c.maxEntries {
 		if _, ok := c.entries.GetAt(key, now); ok {
 			return ErrReplayDetected
 		}
@@ -65,6 +66,7 @@ func (c *MemoryReplayCache) CheckAndMark(clientID string, nonce []byte) error {
 	if !c.entries.AddIfAbsent(key, struct{}{}, now.Add(c.ttl), now) {
 		return ErrReplayDetected
 	}
+	c.active++
 	return nil
 }
 
@@ -74,7 +76,7 @@ func (c *MemoryReplayCache) Sweep(now time.Time) int {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	removed := c.entries.Sweep(now)
+	removed := c.sweepLocked(now)
 	c.nextSweep = now.Add(c.sweepEvery)
 	return removed
 }
@@ -83,7 +85,24 @@ func (c *MemoryReplayCache) Len() int {
 	if c == nil {
 		return 0
 	}
-	return c.entries.Len()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.active
+}
+
+func (c *MemoryReplayCache) Cap() int {
+	if c == nil {
+		return 0
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.maxEntries
+}
+
+func (c *MemoryReplayCache) sweepLocked(now time.Time) int {
+	removed := c.entries.Sweep(now)
+	c.active = c.entries.Len()
+	return removed
 }
 
 func replaySweepInterval(ttl time.Duration) time.Duration {

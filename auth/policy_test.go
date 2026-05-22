@@ -22,8 +22,9 @@ func (e *rateLimitEvents) OnAuthOK(PeerInfo) {}
 func (e *rateLimitEvents) OnAuthFail(remote net.Addr, reason error) {
 	e.remote, e.reason = remote, reason
 }
-func (e *rateLimitEvents) OnReplay(net.Addr, uint64)     {}
-func (e *rateLimitEvents) OnRateLimited(remote net.Addr) { e.remote = remote }
+func (e *rateLimitEvents) OnReplay(net.Addr, uint64)                    {}
+func (e *rateLimitEvents) OnReplayCacheFull(net.Addr, uint64, int, int) {}
+func (e *rateLimitEvents) OnRateLimited(remote net.Addr)                { e.remote = remote }
 
 func TestServerAuthPolicyRateLimited(t *testing.T) {
 	server, client := net.Pipe()

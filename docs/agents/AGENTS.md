@@ -2,6 +2,13 @@
 
 Read this before changing code, examples, docs, public APIs, or integration behavior.
 
+## Read first
+
+- `COMPATIBILITY.md`
+- `MIGRATION.md`
+- `docs/api-surface.md`
+- `docs/agents/task-matrix.yaml`
+
 ## Default integration path
 
 - Use the root package first.
@@ -15,7 +22,7 @@ Read this before changing code, examples, docs, public APIs, or integration beha
 - Do not start from `protocol/` for normal application integration.
 - Do not create a replay cache per connection.
 - Do not put YAML, JSON, TOML, or env parsing in SDK core. Configuration parsing belongs in `cmd/` or examples.
-- Do not add `RunServer(configPath)` to the SDK.
+- Do not add `RunServer(configPath)` to the SDK. Keep config-file mapping in callers; see `docs/config-mapping.md`.
 - Do not claim libknock replaces TLS, mTLS, or application authorization.
 - Do not call `knock.ParseKnockFrameUnsafe` on public server authentication paths.
 

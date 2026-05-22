@@ -10,6 +10,7 @@ type EventSink interface {
     OnAuthOK(peer PeerInfo)
     OnAuthFail(remote net.Addr, reason error)
     OnReplay(remote net.Addr, peerHint uint64)
+    OnReplayCacheFull(remote net.Addr, peerHint uint64, length, capacity int)
     OnRateLimited(remote net.Addr)
 }
 ```
@@ -130,11 +131,13 @@ Track at least:
 - successful authentication count
 - failed authentication count by reason class
 - replay count
+- replay cache capacity and full-cache rejection count
 - rate-limited count
 - knock accepted count
 - knock failed count by reason class
 - firewall allow errors
 - relay upstream errors
+- relay pending-queue full/drop counters
 - current relay connections
 
 Keep high-cardinality labels disabled unless your deployment has strict bounds.
@@ -147,6 +150,8 @@ Event payloads and metric labels must not include secrets, sealed payload bytes,
 
 ## Cache and capacity metrics
 
-`TTLLRU.Len()` is a stored-entry upper bound. It can include expired entries until a read path or `Sweep` removes them, so dashboards should not treat it as an exact active-entry count. For pressure signals, prefer sweep-aware active counts where available and record replay-cache-full or limiter-full decisions separately.
+`TTLLRU.Len()` is a stored-entry upper bound. It can include expired entries until a read path or `Sweep` removes them, so dashboards should not treat it as an exact active-entry count. For pressure signals, prefer sweep-aware active counts where available and record replay-cache-full or limiter-full decisions separately. The Prometheus adapter exports `libknock_auth_replay_cache_full_total`, `libknock_auth_replay_cache_len`, and `libknock_auth_replay_cache_capacity` when the auth path reports `ErrReplayCacheFull`; treat that as either abusive fake-nonce traffic or an undersized cache.
+
+Relay pending-queue pressure is reported through `RelayErrorEvent{Stage:"pending_full", DroppedCount, Pending}` and exported as `libknock_relay_pending_full_total`, `libknock_relay_dropped_total`, and `libknock_relay_pending_current`. Spikes usually mean a burst; sustained growth means the auth worker count, upstream latency, or caller-side rate limits need attention.
 
 Security-sensitive stores fail closed at capacity: replay caches reject new nonces rather than evicting active nonces, and rate limiters reject new keys rather than evicting active buckets. These events should be observable as capacity, abuse, or configuration signals, not as successful admissions.

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"sync"
+	"sync/atomic"
 
 	"github.com/libknock/libknock/auth"
 	"github.com/libknock/libknock/firewall"
@@ -93,6 +94,7 @@ func (g *Gateway) run(ctx context.Context) error {
 		_ = ln.Close()
 	}()
 	pending := make(chan net.Conn, g.maxPendingAuth())
+	var dropped atomic.Int64
 	for range g.maxAuthWorkers() {
 		wg.Add(1)
 		go func() {
@@ -126,9 +128,11 @@ func (g *Gateway) run(ctx context.Context) error {
 		default:
 			_ = conn.Close()
 			g.emitRelayError(RelayErrorEvent{
-				Remote: conn.RemoteAddr(),
-				Stage:  "pending_full",
-				Err:    errors.New("auth pending queue full"),
+				Remote:       conn.RemoteAddr(),
+				Stage:        "pending_full",
+				Err:          errors.New("auth pending queue full"),
+				DroppedCount: dropped.Add(1),
+				Pending:      len(pending),
 			})
 		}
 	}

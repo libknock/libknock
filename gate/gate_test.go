@@ -252,8 +252,9 @@ func (r *gateKnockRecorder) OnAuthFail(_ net.Addr, reason error) {
 	r.authFails = append(r.authFails, reason)
 	r.mu.Unlock()
 }
-func (r *gateKnockRecorder) OnReplay(net.Addr, uint64) {}
-func (r *gateKnockRecorder) OnRateLimited(net.Addr)    {}
+func (r *gateKnockRecorder) OnReplay(net.Addr, uint64)                    {}
+func (r *gateKnockRecorder) OnReplayCacheFull(net.Addr, uint64, int, int) {}
+func (r *gateKnockRecorder) OnRateLimited(net.Addr)                       {}
 func (r *gateKnockRecorder) waitKnocks(t *testing.T, want int) {
 	t.Helper()
 	deadline := time.Now().Add(time.Second)

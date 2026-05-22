@@ -5,23 +5,34 @@ cd "$root"
 
 snapshot=${1:-docs/api-surface.md}
 current=$(mktemp)
-trap 'rm -f "$current"' EXIT
+go run scripts/api_snapshot.go . > "$current"
 
-{ go doc -short .; go doc -short Server; go doc -short PeerInfo; } | awk '/^[[:space:]]*(const|func|type) /{print $2}' | sed 's/(.*//' | sed 's/=//' | sort -u > "$current"
-missing=0
-while IFS= read -r symbol; do
-  [[ -z "$symbol" ]] && continue
-  if ! grep -qxF "$symbol" "$current"; then
-    echo "missing stable root export: $symbol" >&2
-    missing=1
-  fi
-done < <(awk '
-  /^```api-snapshot root$/ {inblock=1; next}
+expected=$(mktemp)
+trap 'rm -f "$current" "$expected"' EXIT
+awk '
+  /^```api-signature-snapshot root$/ {inblock=1; next}
   /^```$/ && inblock {inblock=0; next}
   inblock {print}
-' "$snapshot")
+' "$snapshot" > "$expected"
 
-if [[ $missing -ne 0 ]]; then
+if [[ ! -s "$expected" ]]; then
+  awk '
+    /^```api-snapshot root$/ {inblock=1; next}
+    /^```$/ && inblock {inblock=0; next}
+    inblock {print}
+  ' "$snapshot" | while IFS= read -r symbol; do
+    [[ -z "$symbol" ]] && continue
+    if ! grep -Eq "^(const|func|type|var) ${symbol}([ (]|$)" "$current"; then
+      echo "missing stable root export: $symbol" >&2
+      exit 1
+    fi
+  done
+  echo "api-check: ok (symbol snapshot)"
+  exit 0
+fi
+
+if ! diff -u "$expected" "$current"; then
+  echo "stable root API signature snapshot drifted; update docs/api-surface.md deliberately" >&2
   exit 1
 fi
 
