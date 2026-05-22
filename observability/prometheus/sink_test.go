@@ -160,3 +160,27 @@ func TestKnownMethodLabelsAreBounded(t *testing.T) {
 		t.Fatalf("trimmed method label = %q", got)
 	}
 }
+
+func TestValidateConfigRejectsInvalidBuckets(t *testing.T) {
+	if err := ValidateConfig(Config{RelayDurationBuckets: []float64{0.1, 0.2, 1}}); err != nil {
+		t.Fatalf("valid buckets err = %v", err)
+	}
+	if err := ValidateConfig(Config{RelayDurationBuckets: []float64{0.2, 0.2}}); err == nil {
+		t.Fatal("expected non-increasing buckets error")
+	}
+	if err := ValidateConfig(Config{RelayDurationBuckets: []float64{0}}); err == nil {
+		t.Fatal("expected non-positive bucket error")
+	}
+	if _, err := New(Config{RelayDurationBuckets: []float64{1, 0.5}}); err == nil {
+		t.Fatal("New accepted non-increasing buckets")
+	}
+}
+
+func TestMustNewPanicsOnInvalidBuckets(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected MustNew panic")
+		}
+	}()
+	_ = MustNew(Config{RelayDurationBuckets: []float64{1, 0.5}})
+}

@@ -1,6 +1,6 @@
 # libknock 中文反模式
 
-适用版本：v0.1.0-rc3。
+适用版本：当前主线。
 
 - 不要从 `protocol/` 直接实现普通业务集成；优先使用根包或 `auth`。
 - 不要创建每连接 replay cache；replay 状态必须跨连接共享。

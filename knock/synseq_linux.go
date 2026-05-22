@@ -149,8 +149,7 @@ func ListenSYNSequence(ctx context.Context, opts ListenOptions, handler Handler)
 		}
 		return err
 	}
-	defer unix.Close(fd)
-	go func() { <-ctx.Done(); _ = unix.Close(fd) }()
+	defer newManagedFD(ctx, fd).Close()
 	tracker := newSYNSequenceTracker(seq, opts.ReplayCache)
 	buf := make([]byte, 65535)
 	for {
@@ -299,8 +298,7 @@ func Listen(ctx context.Context, opts ListenOptions, handler Handler) error {
 		}
 		return err
 	}
-	defer unix.Close(fd)
-	go func() { <-ctx.Done(); _ = unix.Close(fd) }()
+	defer newManagedFD(ctx, fd).Close()
 	buf := make([]byte, 65535)
 	for {
 		n, _, err := unix.Recvfrom(fd, buf, 0)

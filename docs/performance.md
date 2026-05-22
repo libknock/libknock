@@ -36,7 +36,7 @@ Benchmarks isolate library-level operations. They do not include Internet latenc
 
 ## rc3 microbenchmark baseline
 
-Environment-limited baseline captured during `v0.1.0-rc3` preparation:
+Environment-limited baseline captured during current mainline preparation:
 
 ```text
 Go version: go1.24.10 linux/arm64

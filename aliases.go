@@ -11,6 +11,8 @@ import (
 
 const MinSecretSize = auth.MinSecretSize
 
+var ErrNilListener = netx.ErrNilListener
+
 type ServerConfig = auth.ServerConfig
 type ClientConfig = auth.ClientConfig
 type PeerInfo = auth.PeerInfo

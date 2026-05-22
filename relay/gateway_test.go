@@ -560,3 +560,31 @@ func TestGatewayRejectsUnsupportedKnockMethodBeforeListen(t *testing.T) {
 		t.Fatalf("Run err = %v", err)
 	}
 }
+
+func TestKnockSessionStoreSeparatesStructuredSessionKeyFields(t *testing.T) {
+	store := NewKnockSessionStore()
+	remoteA := netip.MustParseAddr("192.0.2.41")
+	remoteB := netip.MustParseAddr("192.0.2.42")
+	store.AddSessionForPort(remoteA, "client", []byte("port-a"), 9443, time.Minute, 1)
+	store.AddSessionForPort(remoteA, "client", []byte("port-b"), 9444, time.Minute, 1)
+	store.AddSessionForPort(remoteA, "other", []byte("client-b"), 9443, time.Minute, 1)
+	store.AddSessionForPort(remoteB, "client", []byte("remote-b"), 9443, time.Minute, 1)
+	if err := store.CheckAndConsume(auth.PeerInfo{PeerIdentity: auth.PeerIdentity{ClientID: "client"}, ServerPort: 9443, SessionID: []byte("port-b")}, &net.TCPAddr{IP: remoteA.AsSlice(), Port: 50000}); err == nil {
+		t.Fatal("same client/ip with different port reused the wrong session")
+	}
+	if err := store.CheckAndConsume(auth.PeerInfo{PeerIdentity: auth.PeerIdentity{ClientID: "other"}, ServerPort: 9443, SessionID: []byte("port-a")}, &net.TCPAddr{IP: remoteA.AsSlice(), Port: 50000}); err == nil {
+		t.Fatal("same ip/port with different client reused the wrong session")
+	}
+	if err := store.CheckAndConsume(auth.PeerInfo{PeerIdentity: auth.PeerIdentity{ClientID: "client"}, ServerPort: 9443, SessionID: []byte("remote-b")}, &net.TCPAddr{IP: remoteA.AsSlice(), Port: 50000}); err == nil {
+		t.Fatal("same client/port with different remote reused the wrong session")
+	}
+	if err := store.CheckAndConsume(auth.PeerInfo{PeerIdentity: auth.PeerIdentity{ClientID: "client"}, ServerPort: 9444, SessionID: []byte("port-b")}, &net.TCPAddr{IP: remoteA.AsSlice(), Port: 50000}); err != nil {
+		t.Fatalf("matching port-specific session err = %v", err)
+	}
+	if err := store.CheckAndConsume(auth.PeerInfo{PeerIdentity: auth.PeerIdentity{ClientID: "other"}, ServerPort: 9443, SessionID: []byte("client-b")}, &net.TCPAddr{IP: remoteA.AsSlice(), Port: 50001}); err != nil {
+		t.Fatalf("matching client-specific session err = %v", err)
+	}
+	if err := store.CheckAndConsume(auth.PeerInfo{PeerIdentity: auth.PeerIdentity{ClientID: "client"}, ServerPort: 9443, SessionID: []byte("remote-b")}, &net.TCPAddr{IP: remoteB.AsSlice(), Port: 50002}); err != nil {
+		t.Fatalf("matching remote-specific session err = %v", err)
+	}
+}

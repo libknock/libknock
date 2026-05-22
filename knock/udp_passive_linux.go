@@ -31,8 +31,7 @@ func ListenUDPPassiveSequence(ctx context.Context, opts ListenOptions, handler H
 		}
 		return err
 	}
-	defer unix.Close(fd)
-	go func() { <-ctx.Done(); _ = unix.Close(fd) }()
+	defer newManagedFD(ctx, fd).Close()
 	if err := ValidateClientSecrets(opts.Clients); err != nil {
 		return err
 	}
@@ -97,8 +96,7 @@ func ListenUDPPassive(ctx context.Context, opts ListenOptions, handler Handler) 
 		}
 		return err
 	}
-	defer unix.Close(fd)
-	go func() { <-ctx.Done(); _ = unix.Close(fd) }()
+	defer newManagedFD(ctx, fd).Close()
 	if err := ValidateClientSecrets(opts.Clients); err != nil {
 		return err
 	}

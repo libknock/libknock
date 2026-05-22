@@ -258,8 +258,7 @@ func darwinListenBPF(ctx context.Context, onFrame func([]byte)) error {
 	if err != nil {
 		return err
 	}
-	defer unix.Close(fd)
-	go func() { <-ctx.Done(); _ = unix.Close(fd) }()
+	defer newManagedFD(ctx, fd).Close()
 	if err := syscall.CheckBpfVersion(fd); err != nil {
 		return err
 	}

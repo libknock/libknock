@@ -1,4 +1,4 @@
-version: v0.1.0-rc3
+version: current-mainline
 rules:
   - task: normal_tcp_integration
     allowed_files: ["examples/**", "docs/getting-started.md", "docs/api.md", "docs/agents/recipes/tcp-listener.md"]

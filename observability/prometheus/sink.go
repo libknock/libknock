@@ -13,6 +13,7 @@ import (
 
 const defaultNamespace = "libknock"
 
+// Config controls metric construction. RelayDurationBuckets, when set, must be a strictly increasing Prometheus histogram bucket list; invalid buckets are treated as startup configuration errors by New and as fail-fast panics by MustNew.
 type Config struct {
 	Namespace            string
 	ConstLabels          prom.Labels
@@ -47,6 +48,21 @@ type Sink struct {
 
 var _ observability.EventSink = (*Sink)(nil)
 
+// ValidateConfig checks options that would otherwise fail while constructing Prometheus collectors.
+func ValidateConfig(cfg Config) error {
+	buckets := cfg.RelayDurationBuckets
+	for i, b := range buckets {
+		if b <= 0 {
+			return errors.New("relay duration buckets must be positive")
+		}
+		if i > 0 && b <= buckets[i-1] {
+			return errors.New("relay duration buckets must be strictly increasing")
+		}
+	}
+	return nil
+}
+
+// New constructs a Sink and optionally registers its collectors. It validates histogram bucket configuration during initialization; errors returned here indicate local startup configuration or registration bugs, not recoverable runtime input.
 func New(cfg Config) (*Sink, error) {
 	namespace := strings.TrimSpace(cfg.Namespace)
 	if namespace == "" {
@@ -55,6 +71,9 @@ func New(cfg Config) (*Sink, error) {
 	buckets := cfg.RelayDurationBuckets
 	if len(buckets) == 0 {
 		buckets = prom.DefBuckets
+	}
+	if err := ValidateConfig(Config{RelayDurationBuckets: buckets}); err != nil {
+		return nil, err
 	}
 	clientLabels := []string{}
 	if cfg.IncludeClientLabel {
@@ -89,6 +108,7 @@ func New(cfg Config) (*Sink, error) {
 	return s, nil
 }
 
+// MustNew is the fail-fast variant of New for process startup wiring. It panics only for invalid local metrics configuration or registration conflicts and should not be called with public-network-controlled options.
 func MustNew(cfg Config) *Sink {
 	s, err := New(cfg)
 	if err != nil {

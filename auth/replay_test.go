@@ -81,19 +81,36 @@ func TestMemoryReplayCacheSweepsBeforeFull(t *testing.T) {
 	}
 }
 
-func TestMemoryReplayCacheConcurrentCheckAndMark(t *testing.T) {
-	c := NewMemoryReplayCacheWithLimit(time.Minute, 2048)
+func TestMemoryReplayCacheConcurrentCheckAndMarkDoesNotExceedLimit(t *testing.T) {
+	c := NewMemoryReplayCacheWithLimit(time.Minute, 128)
+	start := make(chan struct{})
 	var wg sync.WaitGroup
+	var mu sync.Mutex
+	allowed, full := 0, 0
 	for i := 0; i < 64; i++ {
 		for j := 0; j < 64; j++ {
 			wg.Add(1)
 			go func(i, j int) {
 				defer wg.Done()
-				_ = c.CheckAndMark("client", []byte{byte(i), byte(j), byte(i >> 8), byte(j >> 8)})
+				<-start
+				err := c.CheckAndMark("client", []byte{byte(i), byte(j), byte(i >> 8), byte(j >> 8)})
+				mu.Lock()
+				defer mu.Unlock()
+				if err == nil {
+					allowed++
+				} else if errors.Is(err, ErrReplayCacheFull) {
+					full++
+				} else {
+					t.Errorf("CheckAndMark err = %v", err)
+				}
 			}(i, j)
 		}
 	}
+	close(start)
 	wg.Wait()
+	if allowed != c.Cap() || c.Len() != c.Cap() || full == 0 {
+		t.Fatalf("allowed=%d full=%d len=%d cap=%d", allowed, full, c.Len(), c.Cap())
+	}
 }
 
 func TestMemoryReplayCacheConcurrentSameNonceAllowsOnlyOne(t *testing.T) {

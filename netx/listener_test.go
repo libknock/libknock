@@ -2,6 +2,7 @@ package netx
 
 import (
 	"context"
+	"errors"
 	"net"
 	"testing"
 	"time"
@@ -48,6 +49,27 @@ func TestAuthenticatedListenerDoesNotHeadOfLineBlockOnSlowAuth(t *testing.T) {
 		}
 	case <-time.After(200 * time.Millisecond):
 		t.Fatal("Accept head-of-line blocked behind slow unauthenticated connection")
+	}
+}
+
+func TestNilListenerReturnsError(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	cfg := ListenerConfig{Auth: auth.ServerConfig{ServerPort: 443, Secrets: auth.StaticSecrets{"client": secret}}}
+	if _, err := NewListener(nil, cfg); !errors.Is(err, ErrNilListener) {
+		t.Fatalf("NewListener nil err = %v, want ErrNilListener", err)
+	}
+	if _, err := WrapListenerWithConfigE(nil, cfg); !errors.Is(err, ErrNilListener) {
+		t.Fatalf("WrapListenerWithConfigE nil err = %v, want ErrNilListener", err)
+	}
+	wrapped := WrapListener(nil, cfg.Auth)
+	if wrapped == nil {
+		t.Fatal("WrapListener returned nil")
+	}
+	if _, err := wrapped.Accept(); !errors.Is(err, ErrNilListener) {
+		t.Fatalf("WrapListener nil Accept err = %v, want ErrNilListener", err)
+	}
+	if err := wrapped.Close(); err != nil {
+		t.Fatalf("WrapListener nil Close err = %v", err)
 	}
 }
 

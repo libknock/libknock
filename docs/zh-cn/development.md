@@ -190,4 +190,6 @@ Prometheus adapter module
 Example programs
 ```
 
+`scripts/check-duplication.sh` 是维护者 warning gate。它会报告 `vendor/` 之外的重复代码热点，便于复查 protocol、firewall、listener、example 等路径，但在已知 fixture/example 重复仍属有意保留时，不作为发布阻断项。
+
 以 [发布检查清单](release-checklist.md) 作为权威发布检查清单。

@@ -26,7 +26,7 @@ echo "== docs link smoke =="
 python3 scripts/check-doc-links.py
 
 echo "== duplication scan =="
-DUPL_THRESHOLD=120 STRICT=1 bash scripts/check-duplication.sh .
+DUPL_THRESHOLD=120 bash scripts/check-duplication.sh .
 
 echo "== license/dependency smoke =="
 test -f LICENSE

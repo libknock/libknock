@@ -11,7 +11,7 @@ Use the root package for normal TCP service integration:
 - one-shot auth: `ServerAuth`, `ClientAuth`
 - client dialing: `Dialer`
 - configuration and metadata: `ServerConfig`, `ClientConfig`, `PeerInfo`
-- stable constants and extension interfaces: `MinSecretSize`, `SecretResolver`, `SecretCandidate`, `ReplayCache`, `KnockSender`, `SessionBoundKnockSender`, `KnockSessionStore`, `EventSink`, `Policy`, `FrameMeta`, `PeerIdentity`
+- stable constants, errors, and extension interfaces: `MinSecretSize`, `ErrNilListener`, `SecretResolver`, `SecretCandidate`, `ReplayCache`, `KnockSender`, `SessionBoundKnockSender`, `KnockSessionStore`, `EventSink`, `Policy`, `FrameMeta`, `PeerIdentity`
 
 
 Stable root export snapshot for automated checks:
@@ -20,6 +20,7 @@ Stable root export snapshot for automated checks:
 ClientAuth
 ClientConfig
 Dialer
+ErrNilListener
 EventSink
 FrameMeta
 KnockSender
@@ -70,6 +71,7 @@ type SecretResolver auth.SecretResolver
 type Server auth.Server
 type ServerConfig auth.ServerConfig
 type SessionBoundKnockSender auth.SessionBoundKnockSender
+var ErrNilListener = netx.ErrNilListener
 ```
 
 ## Stable advanced auth package

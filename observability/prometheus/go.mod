@@ -3,7 +3,7 @@ module github.com/libknock/libknock/observability/prometheus
 go 1.24.0
 
 require (
-	github.com/libknock/libknock v0.1.0-rc3
+	github.com/libknock/libknock v0.1.0-rc3.1
 	github.com/prometheus/client_golang v1.23.2
 )
 

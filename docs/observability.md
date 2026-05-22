@@ -37,6 +37,9 @@ Attach the sink through `GateConfig.Events` or `relay.Gateway.Events`.
 
 ## Prometheus adapter
 
+
+Relay duration histogram buckets are startup configuration, not public input. If `RelayDurationBuckets` is set, buckets must be positive and strictly increasing. `prometheus.New` returns an error for invalid bucket configuration or registration conflicts; `prometheus.MustNew` intentionally panics for the same local startup bugs so services can fail fast before serving traffic.
+
 The Prometheus adapter lives in a nested module:
 
 ```go

@@ -2,6 +2,7 @@ package netx
 
 import (
 	"context"
+	"errors"
 	"net"
 	"sync"
 	"time"
@@ -13,6 +14,8 @@ const (
 	DefaultMaxPendingAuth = 128
 	DefaultMaxAuthWorkers = 32
 )
+
+var ErrNilListener = errors.New("nil listener")
 
 type ListenerConfig struct {
 	Auth           auth.ServerConfig
@@ -59,6 +62,18 @@ type AuthenticatedListener struct {
 	inFlight       map[net.Conn]struct{}
 }
 
+func NewListener(ln net.Listener, cfg ListenerConfig) (*AuthenticatedListener, error) {
+	l, err := WrapListenerWithConfigE(ln, cfg)
+	if err != nil {
+		return nil, err
+	}
+	authenticated, ok := l.(*AuthenticatedListener)
+	if !ok {
+		return nil, errors.New("unexpected listener type")
+	}
+	return authenticated, nil
+}
+
 func WrapListener(ln net.Listener, cfg auth.ServerConfig) net.Listener {
 	l, err := WrapListenerWithConfigE(ln, ListenerConfig{Auth: cfg})
 	if err != nil {
@@ -76,6 +91,9 @@ func WrapListenerWithConfig(ln net.Listener, cfg ListenerConfig) net.Listener {
 }
 
 func WrapListenerWithConfigE(ln net.Listener, cfg ListenerConfig) (net.Listener, error) {
+	if ln == nil {
+		return nil, ErrNilListener
+	}
 	cfg = cfg.withDefaults()
 	server, err := auth.NewServer(cfg.Auth)
 	if err != nil {
@@ -111,12 +129,17 @@ func (l *AuthenticatedListener) Accept() (net.Conn, error) {
 }
 
 func (l *AuthenticatedListener) Close() error {
+	if l == nil {
+		return ErrNilListener
+	}
 	var err error
 	l.closeOnce.Do(func() {
 		l.setErr(net.ErrClosed)
 		l.cancel()
 		l.closeDone()
-		err = l.Listener.Close()
+		if l.Listener != nil {
+			err = l.Listener.Close()
+		}
 		l.closeInFlight()
 	})
 	return err
