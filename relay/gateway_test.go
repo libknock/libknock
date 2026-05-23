@@ -111,6 +111,7 @@ type gatewayRecordingFirewall struct {
 	mu           sync.Mutex
 	revoked      []netip.Addr
 	revokedPorts []int
+	revokeCtxErr chan error
 }
 
 func (f *gatewayRecordingFirewall) Name() string               { return "recording" }
@@ -118,11 +119,14 @@ func (f *gatewayRecordingFirewall) Init(context.Context) error { return nil }
 func (f *gatewayRecordingFirewall) Allow(context.Context, netip.Addr, int, time.Duration) error {
 	return nil
 }
-func (f *gatewayRecordingFirewall) Revoke(_ context.Context, remote netip.Addr, port int) error {
+func (f *gatewayRecordingFirewall) Revoke(ctx context.Context, remote netip.Addr, port int) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.revoked = append(f.revoked, remote)
 	f.revokedPorts = append(f.revokedPorts, port)
+	if f.revokeCtxErr != nil {
+		f.revokeCtxErr <- ctx.Err()
+	}
 	return nil
 }
 func (f *gatewayRecordingFirewall) Cleanup(context.Context) error { return nil }
@@ -339,6 +343,52 @@ func TestGatewayListenKnockUsesDerivedProtectedPort(t *testing.T) {
 		t.Fatalf("send knock: %v", lastSendErr)
 	}
 	t.Fatal("knock listener did not accept frame for derived protected port")
+}
+
+func TestGatewayListenKnockTimerRevokeUsesDetachedContext(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	store := NewKnockSessionStore()
+	fw := &gatewayRecordingFirewall{revokeCtxErr: make(chan error, 1)}
+	ln, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	listen := ln.LocalAddr().String()
+	_ = ln.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	g := Gateway{Listen: "127.0.0.1:0", KnockMethod: "udp", KnockListen: listen, KnockClients: []knock.ClientSecret{{ClientID: "client", Secret: secret}}, AllowTTL: 80 * time.Millisecond}
+	errCh := make(chan error, 1)
+	timers := timerset.New()
+	defer timers.StopAll()
+	go func() { errCh <- g.listenKnock(ctx, fw, store, 9443, timers) }()
+	remote := netip.MustParseAddr("127.0.0.1")
+	sessionID := []byte("gateway-session2")
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		select {
+		case err := <-errCh:
+			t.Fatalf("knock listener exited early: %v", err)
+		default:
+		}
+		if err := knock.SendMethod(ctx, knock.UDPMethod, knock.SendOptions{ServerAddr: listen, ClientID: "client", Secret: secret, ServerPort: 9443, SessionID: sessionID}); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.CheckAndConsume(auth.PeerInfo{PeerIdentity: auth.PeerIdentity{ClientID: "client"}, ServerPort: 9443, SessionID: sessionID}, &net.TCPAddr{IP: remote.AsSlice(), Port: 50000}); err == nil {
+			cancel()
+			select {
+			case err := <-fw.revokeCtxErr:
+				if err != nil {
+					t.Fatalf("revoke ctx err = %v, want nil", err)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("timer revoke was not called")
+			}
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("knock listener did not accept frame")
 }
 
 type gatewayEventRecorder struct {

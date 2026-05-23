@@ -70,7 +70,7 @@ type GateConfig struct {
 - `KnockListen`：显式的敲门监听地址。
 - `KnockPort`：派生默认敲门监听地址时使用的敲门端口。
 - `KnockClients`：敲门监听器接受的客户端 ID 和密钥。
-- `AllowTTL`：防火墙租约持续时间。未设置时，默认行为使用较短租约。
+- `AllowTTL`：防火墙租约持续时间。未设置时，默认行为使用较短租约。重复的有效敲门会从最后一次接受的敲门开始续签防火墙放行窗口。
 - `MaxConnectionsPerKnock`：每个敲门会话接受的 TCP 连接数。
 - `Events`：网关级事件接收器。
 

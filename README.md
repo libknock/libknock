@@ -196,6 +196,8 @@ For most deployments, start with UDP knock before considering passive or raw-pac
 
 `knock-firewall-auth` and `knock-firewall-only` require a real firewall backend. `auth-only` and `knock-auth-only` can use `firewall.Noop{}`.
 
+Repeated valid knocks renew the firewall allow window from the latest accepted knock; stale timers from earlier knocks do not revoke the renewed lease.
+
 ## Relay gateway
 
 `relay.Gateway` is an optional TCP forwarding component. It listens on one address, performs libknock authentication and optional knock/firewall handling, then connects to an upstream TCP service.

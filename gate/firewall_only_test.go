@@ -14,18 +14,22 @@ import (
 )
 
 type recordingFirewall struct {
-	mu      sync.Mutex
-	revoked []netip.Addr
-	config  firewall.Config
+	mu           sync.Mutex
+	revoked      []netip.Addr
+	config       firewall.Config
+	revokeCtxErr chan error
 }
 
 func (f *recordingFirewall) Name() string                                                { return "recording" }
 func (f *recordingFirewall) Init(context.Context) error                                  { return nil }
 func (f *recordingFirewall) Allow(context.Context, netip.Addr, int, time.Duration) error { return nil }
-func (f *recordingFirewall) Revoke(_ context.Context, remote netip.Addr, _ int) error {
+func (f *recordingFirewall) Revoke(ctx context.Context, remote netip.Addr, _ int) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.revoked = append(f.revoked, remote)
+	if f.revokeCtxErr != nil {
+		f.revokeCtxErr <- ctx.Err()
+	}
 	return nil
 }
 func (f *recordingFirewall) Cleanup(context.Context) error { return nil }
@@ -93,5 +97,26 @@ func TestFirewallOnlyTTLRevokesAfterConsumedSession(t *testing.T) {
 	}
 	if fw.revokeCount() != 1 {
 		t.Fatalf("revoke count = %d, want 1", fw.revokeCount())
+	}
+}
+
+func TestFirewallOnlyTimerRevokeUsesDetachedContext(t *testing.T) {
+	fw := &recordingFirewall{revokeCtxErr: make(chan error, 1)}
+	g, err := New(Config{Mode: KnockFirewallOnly, Firewall: fw, Auth: auth.ServerConfig{ServerPort: 443}, KnockMethod: knock.UDPMethod, KnockClients: []knock.ClientSecret{{ClientID: "client", Secret: testSecret()}}, AllowTTL: 10 * time.Millisecond})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.timers.StopAll()
+	ctx, cancel := context.WithCancel(context.Background())
+	remote := netip.MustParseAddr("192.0.2.30")
+	g.knockHandler(ctx, nil)(knock.Event{SourceIP: remote.AsSlice(), ClientID: "client", Method: knock.UDPMethod})
+	cancel()
+	select {
+	case err := <-fw.revokeCtxErr:
+		if err != nil {
+			t.Fatalf("revoke ctx err = %v, want nil", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timer revoke was not called")
 	}
 }

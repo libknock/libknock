@@ -48,10 +48,15 @@ func (s *KnockSessionStore) Add(remote netip.Addr, clientID string, ttl time.Dur
 }
 
 func (s *KnockSessionStore) AddSession(remote netip.Addr, clientID string, sessionID []byte, ttl time.Duration, uses int) {
+	// Port 0 is the wildcard admission used by knock-firewall-only listeners.
+	// TCP auth modes must use AddSessionForPort so the session remains bound to
+	// the authenticated protected port.
 	s.AddSessionForPort(remote, clientID, sessionID, 0, ttl, uses)
 }
 
 func (s *KnockSessionStore) AddSessionForPort(remote netip.Addr, clientID string, sessionID []byte, port int, ttl time.Duration, uses int) {
+	// Port-specific sessions are for TCP auth modes. Reserve port 0 for the
+	// firewall-only wildcard session created through AddSession.
 	if s == nil || !remote.IsValid() || clientID == "" {
 		return
 	}
@@ -165,6 +170,9 @@ func (s *KnockSessionStore) MarkFirewall(remote netip.Addr, port int, ttl time.D
 	s.firewall.Sweep(now)
 	key := firewallKey(remote, port)
 	if entry, ok := s.firewall.Peek(key); ok && entry.ExpiresAt.After(now) {
+		// A repeated valid knock renews the active firewall lease. The TTL is
+		// recalculated from the latest knock, and the old timer becomes stale
+		// because its lease id no longer matches.
 		s.nextID++
 		id := s.nextID
 		s.firewall.SetUntil(key, &firewallLease{id: id}, now.Add(ttl))

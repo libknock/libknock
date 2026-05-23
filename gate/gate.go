@@ -395,6 +395,9 @@ func (g *Gate) knockHandler(ctx context.Context, ln net.Listener) knock.Handler 
 		if g.cfg.Mode == KnockFirewallOnly {
 			storeClientID = firewallOnlyClientID
 			sessionID = nil
+			// Knock-firewall-only stores a wildcard session with port 0 because
+			// there is no TCP auth frame to bind. The firewall lease still uses
+			// the real protected port above.
 			g.store.AddSession(remote, storeClientID, sessionID, ttl, uses)
 		} else {
 			g.store.AddSessionForPort(remote, storeClientID, sessionID, port, ttl, uses)
@@ -403,7 +406,7 @@ func (g *Gate) knockHandler(ctx context.Context, ln net.Listener) knock.Handler 
 		g.timers.AfterFunc(ttl, func() {
 			g.store.Expire(remote, storeClientID, time.Now())
 			if g.store.ExpireFirewall(remote, port, leaseID, time.Now()) && gatewaycore.ShouldManualRevoke(fw) {
-				if err := gatewaycore.RevokeFirewall(ctx, fw, remote, port, g.cfg.Events); err != nil {
+				if err := gatewaycore.RevokeFirewallDetached(fw, remote, port, g.cfg.Events); err != nil {
 					g.recordCleanupErr(err)
 				}
 			}

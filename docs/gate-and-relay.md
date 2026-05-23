@@ -70,7 +70,7 @@ Important fields:
 - `KnockListen`: explicit knock listen address.
 - `KnockPort`: knock port used when deriving the default knock listen address.
 - `KnockClients`: client IDs and secrets accepted by the knock listener.
-- `AllowTTL`: firewall lease duration. Default behavior uses a short lease when not set.
+- `AllowTTL`: firewall lease duration. Default behavior uses a short lease when not set. Repeated valid knocks renew the firewall allow window from the latest accepted knock.
 - `MaxConnectionsPerKnock`: accepted TCP connections per knock session.
 - `Events`: gateway-level event sink.
 

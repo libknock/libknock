@@ -61,6 +61,10 @@ Record benchmark output, Go version, OS/architecture, CPU model, and whether tes
 
 Dependency model: publish a standard source archive for normal Go module users and a companion `with-vendor` archive for offline review, reproducible local audit, LLM-assisted integration, and restricted CI. The vendored archive must include `vendor/`, `vendor/modules.txt`, `go.work`, and `go.work.sum`.
 
+## RC3.3 lifecycle-hardening status
+
+The rc3.3 pass adds firewall revoke lifecycle regression coverage and documents existing firewall lease/session semantics. Its validation record is [`docs/validation/rc3.3.md`](validation/rc3.3.md). It does not add target-host firewall mutation, passive UDP DROP, Windows/macOS packet-path, long fuzz, or production throughput claims.
+
 ## RC3.2 documentation-scaffolding status
 
 The rc3.2 documentation pass adds no new runtime validation claims. Its draft validation record is [`docs/validation/rc3.2.md`](validation/rc3.2.md). Treat the full release gate, package archive creation, real-host firewall checks, passive UDP DROP checks, Windows/macOS packet paths, long fuzz, and production throughput as pending until that record is replaced or supplemented with completed evidence.

@@ -59,7 +59,19 @@ func AllowFirewall(ctx context.Context, fw firewall.Backend, remote netip.Addr, 
 func RevokeFirewall(ctx context.Context, fw firewall.Backend, remote netip.Addr, port int, sink observability.GatewayEvents) error {
 	revokeCtx, cancel := FirewallOpContext(ctx)
 	defer cancel()
-	if err := fw.Revoke(revokeCtx, remote, port); err != nil {
+	return revokeFirewall(revokeCtx, fw, remote, port, sink)
+}
+
+// RevokeFirewallDetached is for timer and shutdown cleanup after serving
+// contexts may already be cancelled.
+func RevokeFirewallDetached(fw firewall.Backend, remote netip.Addr, port int, sink observability.GatewayEvents) error {
+	revokeCtx, cancel := context.WithTimeout(context.Background(), FirewallOperationTimeout)
+	defer cancel()
+	return revokeFirewall(revokeCtx, fw, remote, port, sink)
+}
+
+func revokeFirewall(ctx context.Context, fw firewall.Backend, remote netip.Addr, port int, sink observability.GatewayEvents) error {
+	if err := fw.Revoke(ctx, remote, port); err != nil {
 		EventEmitter{Sink: sink}.FirewallError(observability.FirewallErrorEvent{Remote: remote, Port: port, Err: err})
 		return err
 	}

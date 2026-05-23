@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.0-rc3.3 - 2026-05-23
+
+See [docs/release-notes/v0.1.0-rc3.3.md](docs/release-notes/v0.1.0-rc3.3.md).
+
+### Release scope
+
+- Hardened firewall revoke cleanup by adding a detached revoke helper for timer/shutdown paths, so expired allow-window cleanup is not derived from an already-cancelled serving context.
+- Kept normal request-path revoke behavior context-bound while switching gate and relay TTL timer revokes to detached cleanup.
+- Documented repeated valid-knock lease renewal semantics: the firewall allow window is renewed from the latest accepted knock, and earlier timers become stale.
+- Clarified firewall-only wildcard session semantics: port `0` is only for knock-firewall-only listener admission; firewall leases remain bound to the real protected port.
+
+### Validation status
+
+- Full local release gate must pass before publishing: vendor-mode test/vet/build, race subset, nested Prometheus/gRPC checks, benchmark smoke, API/doc/duplication checks, `scripts/check.sh`, `scripts/release-check.sh`, archive packaging, and sha256 verification.
+- This RC does not add real-host firewall mutation, UDP passive DROP, Windows/macOS packet-driver, long fuzz, or production throughput claims.
+
 ## v0.1.0-rc3.2 - 2026-05-22
 
 See [docs/release-notes/v0.1.0-rc3.2.md](docs/release-notes/v0.1.0-rc3.2.md).

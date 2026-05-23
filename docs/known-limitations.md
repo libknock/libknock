@@ -60,6 +60,10 @@ Validation status is tracked by capability level:
 
 This release round does not claim full-machine validation for every firewall backend, Windows path, or macOS passive capture path.
 
+## RC3.3 lifecycle-hardening boundary
+
+rc3.3 lifecycle hardening does not reduce the known validation limits above. It covers cleanup context handling in unit/integration tests and documents existing lease semantics; it is not evidence of real-host firewall behavior, packet-capture driver behavior, long fuzz coverage, or production throughput.
+
 ## RC3.2 documentation-pass boundary
 
 rc3.2 documentation scaffolding does not reduce the known validation limits above. In particular, a generated `with-vendor` archive and IDE-assistant guidance improve reviewability, but they are not evidence of real-host firewall behavior, packet-capture driver behavior, long fuzz coverage, or production throughput.

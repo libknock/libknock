@@ -56,9 +56,27 @@ func TestAllowFirewallEmitsEvents(t *testing.T) {
 	}
 }
 
+func TestRevokeFirewallDetachedUsesFreshContext(t *testing.T) {
+	revokeCtxErr := make(chan error, 1)
+	fw := &stubFirewall{revokeCtxErr: revokeCtxErr}
+	remote := netip.MustParseAddr("192.0.2.20")
+	if err := RevokeFirewallDetached(fw, remote, 443, nil); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-revokeCtxErr:
+		if err != nil {
+			t.Fatalf("revoke ctx err = %v, want nil", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("revoke was not called")
+	}
+}
+
 type stubFirewall struct {
-	allow int
-	err   error
+	allow        int
+	err          error
+	revokeCtxErr chan error
 }
 
 func (f *stubFirewall) Name() string               { return "stub" }
@@ -67,8 +85,13 @@ func (f *stubFirewall) Allow(context.Context, netip.Addr, int, time.Duration) er
 	f.allow++
 	return f.err
 }
-func (f *stubFirewall) Revoke(context.Context, netip.Addr, int) error { return f.err }
-func (f *stubFirewall) Cleanup(context.Context) error                 { return nil }
+func (f *stubFirewall) Revoke(ctx context.Context, _ netip.Addr, _ int) error {
+	if f.revokeCtxErr != nil {
+		f.revokeCtxErr <- ctx.Err()
+	}
+	return f.err
+}
+func (f *stubFirewall) Cleanup(context.Context) error { return nil }
 
 type eventSink struct{ allow, fwErr int }
 
