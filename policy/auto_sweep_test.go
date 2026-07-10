@@ -48,7 +48,7 @@ func TestLimiterRejectsNewKeyAtLimit(t *testing.T) {
 	}
 }
 
-func TestBanListEvictsOldestAtLimit(t *testing.T) {
+func TestBanListDoesNotEvictActiveBanAtLimit(t *testing.T) {
 	now := time.Unix(0, 0)
 	b := NewBanListWithClockAndLimit(ClockFunc(func() time.Time { return now }), 1)
 	b.Ban("old", time.Hour)
@@ -56,7 +56,10 @@ func TestBanListEvictsOldestAtLimit(t *testing.T) {
 	if got := b.Len(); got != 1 {
 		t.Fatalf("Len = %d, want 1", got)
 	}
-	if b.IsBanned("old") {
-		t.Fatal("old key should have been evicted")
+	if !b.IsBanned("old") {
+		t.Fatal("active ban should not be evicted")
+	}
+	if !b.IsBanned("new") {
+		t.Fatal("Ban must fail closed when the legacy API cannot report capacity")
 	}
 }

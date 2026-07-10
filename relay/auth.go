@@ -10,6 +10,8 @@ import (
 	"github.com/libknock/libknock/internal/gatewaycore"
 )
 
+var bidirectionalContext = BidirectionalContext
+
 func (g *Gateway) handleConn(parent context.Context, conn net.Conn, cfg auth.ServerConfig, fw firewall.Backend, store *KnockSessionStore) {
 	defer conn.Close()
 	start := time.Now()
@@ -35,7 +37,11 @@ func (g *Gateway) handleConn(parent context.Context, conn net.Conn, cfg auth.Ser
 		return
 	}
 	defer upstream.Close()
-	stats := Bidirectional(client, upstream, g.IdleTimeout)
+	stats, err := bidirectionalContext(parent, client, upstream, g.IdleTimeout)
+	if err != nil {
+		g.emitRelayError(RelayErrorEvent{Remote: conn.RemoteAddr(), ClientID: peer.ClientID, Stage: "relay", Err: err})
+		return
+	}
 	g.emitRelayOK(RelayEvent{Remote: conn.RemoteAddr(), ClientID: peer.ClientID, RX: stats.RX, TX: stats.TX, Duration: time.Since(start)})
 }
 

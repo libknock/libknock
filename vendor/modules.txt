@@ -10,7 +10,7 @@ github.com/cespare/xxhash/v2
 # github.com/kylelemons/godebug v1.1.0
 ## explicit; go 1.11
 github.com/kylelemons/godebug/diff
-# github.com/libknock/libknock v0.1.0-rc3.1 => .
+# github.com/libknock/libknock v0.1.0-rc3.4 => .
 ## explicit; go 1.24.0
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit

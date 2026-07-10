@@ -74,6 +74,7 @@ func (g *Gateway) run(ctx context.Context) error {
 	defer timers.StopAll()
 	defer func() { _ = gatewaycore.CleanupFirewallDetached(fw) }()
 	var childErr firstChildError
+	active := newActiveConnections()
 	var wg sync.WaitGroup
 	if g.KnockMethod != "" {
 		wg.Add(1)
@@ -83,6 +84,7 @@ func (g *Gateway) run(ctx context.Context) error {
 			if err != nil && runCtx.Err() == nil {
 				childErr.store(err)
 				g.emitRelayError(RelayErrorEvent{Stage: "knock", Err: err})
+				cancel()
 				_ = ln.Close()
 			}
 		}()
@@ -92,6 +94,7 @@ func (g *Gateway) run(ctx context.Context) error {
 		defer wg.Done()
 		<-runCtx.Done()
 		_ = ln.Close()
+		active.CloseAll()
 	}()
 	pending := make(chan net.Conn, g.maxPendingAuth())
 	var dropped atomic.Int64
@@ -101,6 +104,7 @@ func (g *Gateway) run(ctx context.Context) error {
 			defer wg.Done()
 			for conn := range pending {
 				g.handleConn(runCtx, conn, authCfg, fw, store)
+				active.Remove(conn)
 			}
 		}()
 	}
@@ -112,20 +116,26 @@ func (g *Gateway) run(ctx context.Context) error {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			if runCtx.Err() != nil {
-				return nil
-			}
 			if e := childErr.load(); e != nil {
 				return e
 			}
+			if runCtx.Err() != nil {
+				return nil
+			}
 			return err
 		}
+		active.Add(conn)
 		select {
 		case pending <- conn:
 		case <-runCtx.Done():
+			active.Remove(conn)
 			_ = conn.Close()
+			if e := childErr.load(); e != nil {
+				return e
+			}
 			return nil
 		default:
+			active.Remove(conn)
 			_ = conn.Close()
 			g.emitRelayError(RelayErrorEvent{
 				Remote:       conn.RemoteAddr(),
@@ -135,6 +145,46 @@ func (g *Gateway) run(ctx context.Context) error {
 				Pending:      len(pending),
 			})
 		}
+	}
+}
+
+type activeConnections struct {
+	mu     sync.Mutex
+	conns  map[net.Conn]struct{}
+	closed bool
+}
+
+func newActiveConnections() *activeConnections {
+	return &activeConnections{conns: make(map[net.Conn]struct{})}
+}
+
+func (c *activeConnections) Add(conn net.Conn) {
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		_ = conn.Close()
+		return
+	}
+	c.conns[conn] = struct{}{}
+	c.mu.Unlock()
+}
+
+func (c *activeConnections) Remove(conn net.Conn) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.conns, conn)
+}
+
+func (c *activeConnections) CloseAll() {
+	c.mu.Lock()
+	c.closed = true
+	conns := make([]net.Conn, 0, len(c.conns))
+	for conn := range c.conns {
+		conns = append(conns, conn)
+	}
+	c.mu.Unlock()
+	for _, conn := range conns {
+		_ = conn.Close()
 	}
 }
 

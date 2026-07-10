@@ -65,31 +65,33 @@ func (n *Nftables) Init(ctx context.Context) error {
 	if err := validateNftablesConfig(n.cfg.Nftables); err != nil {
 		return err
 	}
+	ipv6 := ipv6Enabled(n.cfg, n.Name())
 	udpDropRule := ""
 	if n.cfg.DropUDPKnockPort {
 		udpDropRule = fmt.Sprintf("    udp dport %d drop\n", udpKnockPort(n.cfg))
+	}
+	setV6, ruleV6 := "", ""
+	if ipv6 {
+		setV6 = fmt.Sprintf("\n  set %s {\n    type ipv6_addr\n    timeout %ds\n  }\n", n.setV6, int(n.cfg.AllowSeconds))
+		ruleV6 = fmt.Sprintf("    ip6 saddr @%s tcp dport %d accept\n", n.setV6, n.cfg.Port)
 	}
 	createScript := fmt.Sprintf(`table %s %s {
   set %s {
     type ipv4_addr
     timeout %ds
   }
-
-  set %s {
-    type ipv6_addr
-    timeout %ds
-  }
+%s
 
   chain %s {
     type filter hook input priority -10; policy accept;
     ct state established,related accept
     ip saddr @%s tcp dport %d accept
-    ip6 saddr @%s tcp dport %d accept
+%s
     tcp dport %d drop
 %s
   }
 }
-`, n.family, n.table, n.setV4, int(n.cfg.AllowSeconds), n.setV6, int(n.cfg.AllowSeconds), n.chain, n.setV4, n.cfg.Port, n.setV6, n.cfg.Port, n.cfg.Port, udpDropRule)
+`, n.family, n.table, n.setV4, int(n.cfg.AllowSeconds), setV6, n.chain, n.setV4, n.cfg.Port, ruleV6, n.cfg.Port, udpDropRule)
 
 	if err := n.Cleanup(ctx); err != nil {
 		return err
@@ -117,6 +119,9 @@ func (n *Nftables) Allow(ctx context.Context, addr netip.Addr, port int, ttl tim
 		if toIP(addr).To16() == nil {
 			return fmt.Errorf("invalid IP address %s", addr.String())
 		}
+		if !ipv6Enabled(n.cfg, n.Name()) {
+			return errIPv6Unsupported(n.Name())
+		}
 		deleteInput := fmt.Sprintf("delete element %s %s %s { %s }\n", n.family, n.table, n.setV6, addr.String())
 		_ = ignoreMissingFirewallObject(runInputWithConfig(ctx, n.cfg, deleteInput, "nft", "-f", "-"))
 		input := fmt.Sprintf("add element %s %s %s { %s timeout %ds }\n", n.family, n.table, n.setV6, addr.String(), seconds)
@@ -140,6 +145,9 @@ func (n *Nftables) IsAllowed(ctx context.Context, addr netip.Addr, port int) (bo
 		if ip.To16() == nil {
 			return false, fmt.Errorf("invalid IP address %s", addr.String())
 		}
+		if !ipv6Enabled(n.cfg, n.Name()) {
+			return false, nil
+		}
 		set = n.setV6
 	} else {
 		addrText = v4.String()
@@ -160,6 +168,9 @@ func (n *Nftables) Revoke(ctx context.Context, addr netip.Addr, port int) error 
 	v4 := toIP(addr).To4()
 	if v4 == nil {
 		if toIP(addr).To16() == nil {
+			return nil
+		}
+		if !ipv6Enabled(n.cfg, n.Name()) {
 			return nil
 		}
 		input := fmt.Sprintf("delete element %s %s %s { %s }\n", n.family, n.table, n.setV6, addr.String())

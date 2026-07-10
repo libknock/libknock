@@ -87,3 +87,27 @@ func TestBanListShortTTLSweepInterval(t *testing.T) {
 		t.Fatalf("Len after short-ttl periodic sweep = %d, want 1", got)
 	}
 }
+
+func TestBanListFailsClosedAtCapacityWithoutEvictingActiveBan(t *testing.T) {
+	now := time.Unix(100, 0)
+	b := NewBanListWithClockAndLimit(ClockFunc(func() time.Time { return now }), 1)
+	if err := b.BanE("first", time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.BanE("second", time.Minute); !errors.Is(err, ErrBanListFull) {
+		t.Fatalf("BanE full error = %v, want ErrBanListFull", err)
+	}
+	if !b.IsBanned("first") {
+		t.Fatal("active ban was evicted at capacity")
+	}
+	if !b.IsBanned("second") {
+		t.Fatal("legacy void Ban API must fail closed at capacity")
+	}
+	b.Unban("first")
+	if err := b.BanE("second", time.Minute); err != nil {
+		t.Fatalf("BanE after capacity release: %v", err)
+	}
+	if !b.IsBanned("second") {
+		t.Fatal("ban was not stored after capacity release")
+	}
+}

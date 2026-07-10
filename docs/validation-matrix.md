@@ -63,6 +63,8 @@ Dependency model: publish a standard source archive for normal Go module users a
 
 ## RC3.3 lifecycle-hardening status
 
+The rc3.4 pass fixes audited concurrency, cancellation, relay-error reporting, envelope budget, replay-cache, firewall/configuration, bounded-state, and release-metadata defects. Its validation record is [`docs/validation/rc3.4.md`](validation/rc3.4.md). It does not add target-host firewall mutation, passive UDP DROP, Windows/macOS packet-path, long fuzz, or production throughput claims.
+
 The rc3.3 pass adds firewall revoke lifecycle regression coverage and documents existing firewall lease/session semantics. Its validation record is [`docs/validation/rc3.3.md`](validation/rc3.3.md). It does not add target-host firewall mutation, passive UDP DROP, Windows/macOS packet-path, long fuzz, or production throughput claims.
 
 ## RC3.2 documentation-scaffolding status

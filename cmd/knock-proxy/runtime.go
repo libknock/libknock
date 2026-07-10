@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/libknock/libknock"
@@ -116,17 +117,28 @@ func handleClientConn(ctx context.Context, local net.Conn, rt clientRuntime, dia
 }
 
 type knockSender struct {
+	mu      sync.RWMutex
 	method  string
 	opts    knock.SendOptions
 	retry   int
 	timeout time.Duration
 }
 
+// SetSessionID is retained for legacy auth.SessionBoundKnockSender callers.
 func (s *knockSender) SetSessionID(sessionID []byte) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.opts.SessionID = append([]byte(nil), sessionID...)
 }
 
 func (s *knockSender) Knock(ctx context.Context) error {
+	s.mu.RLock()
+	opts := s.opts
+	s.mu.RUnlock()
+	return s.knock(ctx, opts)
+}
+
+func (s *knockSender) knock(ctx context.Context, opts knock.SendOptions) error {
 	attempts := s.retry + 1
 	if attempts < 1 {
 		attempts = 1
@@ -138,7 +150,7 @@ func (s *knockSender) Knock(ctx context.Context) error {
 		if s.timeout > 0 {
 			callCtx, cancel = context.WithTimeout(ctx, s.timeout)
 		}
-		last = knock.SendMethod(callCtx, s.method, s.opts)
+		last = knock.SendMethod(callCtx, s.method, opts)
 		cancel()
 		if last == nil {
 			return nil

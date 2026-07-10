@@ -238,15 +238,15 @@ func TestLoadConfigRejectsLegacyJSONKnockOptions(t *testing.T) {
 	}
 }
 
-func TestLoadConfigAllowsUnrelatedJSONKeys(t *testing.T) {
+func TestLoadConfigRejectsUnknownTopLevelFields(t *testing.T) {
 	_, err := loadConfig(writeTempConfig(t, `mode: server
 log:
   format: json
 output:
   json: true
 `))
-	if err != nil {
-		t.Fatalf("loadConfig rejected unrelated json keys: %v", err)
+	if err == nil || !strings.Contains(err.Error(), "field log not found") {
+		t.Fatalf("loadConfig err = %v, want unknown field rejection", err)
 	}
 }
 
@@ -360,5 +360,79 @@ firewall:
 	}
 	if rt.Firewall.EnableIPv6 == nil || *rt.Firewall.EnableIPv6 {
 		t.Fatalf("EnableIPv6 = %#v, want false", rt.Firewall.EnableIPv6)
+	}
+}
+
+func TestLoadConfigRejectsUnknownFields(t *testing.T) {
+	_, err := loadConfig(writeTempConfig(t, `mode: server
+server:
+  tcp_listen: "127.0.0.1:10443"
+  upstream: "127.0.0.1:22"
+  typo: rejected
+`))
+	if err == nil || !strings.Contains(err.Error(), "field typo not found") {
+		t.Fatalf("loadConfig err = %v, want unknown field rejection", err)
+	}
+}
+
+func TestLoadConfigRejectsNegativeNumericFields(t *testing.T) {
+	for name, body := range map[string]string{
+		"retry":            "knock:\n  retry: -1\n",
+		"timeout":          "timeouts:\n  auth_seconds: -1\n",
+		"connection_limit": "access:\n  max_connections_per_knock: -1\n",
+		"client_limit":     "auth:\n  clients:\n    - client_id: client-a\n      max_connections: -1\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := loadConfig(writeTempConfig(t, body))
+			if err == nil || !strings.Contains(err.Error(), "must not be negative") {
+				t.Fatalf("loadConfig err = %v, want negative-value rejection", err)
+			}
+		})
+	}
+}
+
+func TestSecretAndSecretFileAreMutuallyExclusive(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "secret")
+	if err := os.WriteFile(path, []byte(demoSecret), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := parseSecret(demoSecret, path); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
+		t.Fatalf("parseSecret err = %v, want secret conflict", err)
+	}
+}
+
+func TestDefaultKnockMethodIsUDP(t *testing.T) {
+	server := mustLoadConfig(t, `mode: server
+server:
+  tcp_listen: "127.0.0.1:10443"
+  upstream: "127.0.0.1:22"
+auth:
+  clients:
+    - client_id: client-a
+      secret: `+demoSecret+`
+firewall:
+  backend: noop
+`)
+	rt, err := server.serverRuntime()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rt.KnockMethod != knock.UDPMethod {
+		t.Fatalf("server default method = %q, want %q", rt.KnockMethod, knock.UDPMethod)
+	}
+
+	client := mustLoadConfig(t, `mode: client
+client:
+  listen: "127.0.0.1:18080"
+  server_addr: "198.51.100.10:10443"
+  client_id: client-a
+  secret: `+demoSecret+`
+`)
+	clientRT, err := client.clientRuntime()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if clientRT.KnockMethod != knock.UDPMethod {
+		t.Fatalf("client default method = %q, want %q", clientRT.KnockMethod, knock.UDPMethod)
 	}
 }

@@ -31,7 +31,7 @@ Repository validation for Linux firewall backends is currently code-level and dr
 
 ## Defaults and IPv6
 
-`allow_seconds` defaults to 15 seconds when the SDK or CLI constructs a timeout-capable backend directly. `iptables` and `ipset-iptables` keep IPv6 auto-detection by default, but deployments can set `enable_ipv6: false` to force IPv4-only operation in containers or minimal systems where `ip6tables` exists but cannot be used safely.
+`allow_seconds` defaults to 15 seconds when the SDK or CLI constructs a timeout-capable backend directly. `nftables`, `iptables`, and `ipset-iptables` keep IPv6 auto-detection by default, but deployments can set `enable_ipv6: false` to force IPv4-only operation. For nftables this omits the IPv6 set and `ip6` rule; IPv6 allow attempts then return an unsupported-family error.
 
 ## Backend selection
 

@@ -1,5 +1,9 @@
 # Release notes
 
+## v0.1.0-rc3.4
+
+See [v0.1.0-rc3.4 release notes](release-notes/v0.1.0-rc3.4.md).
+
 ## v0.1.0-rc3.3
 
 See [v0.1.0-rc3.3 release notes](release-notes/v0.1.0-rc3.3.md).

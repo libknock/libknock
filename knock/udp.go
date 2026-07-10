@@ -61,7 +61,18 @@ func (l *udpListener) Addr() net.Addr { return l.conn.LocalAddr() }
 func (l *udpListener) Serve(ctx context.Context, handler Handler) error {
 	ctx = backgroundIfNil(ctx)
 	defer l.Close()
-	go func() { <-ctx.Done(); _ = l.Close() }()
+	// The context watcher must also stop when ReadFrom returns for a reason
+	// other than context cancellation. Otherwise a failed listener leaves one
+	// goroutine blocked on a context that its caller may retain indefinitely.
+	serveDone := make(chan struct{})
+	defer close(serveDone)
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = l.Close()
+		case <-serveDone:
+		}
+	}()
 	opts := l.opts
 	replay := replayCache(opts)
 	maxFrameSize := maxKnockFrameSize(opts)

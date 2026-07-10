@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"testing"
@@ -177,14 +178,22 @@ func TestOptionalServerProof(t *testing.T) {
 	}
 }
 
-func TestServerConfigRejectsHintModeNoneWhenStaticCandidatesExceedAttempts(t *testing.T) {
+func TestServerConfigRejectsHintModeNoneWhenStaticCandidateBucketCostExceedsAttempts(t *testing.T) {
 	secrets := StaticSecrets{}
-	for i := 0; i < DefaultMaxAuthAttempts; i++ {
-		secrets[string(rune('a'+i%26))+string(rune('a'+i/26))] = []byte("0123456789abcdef0123456789abcdef")
+	for i := 0; i < 13; i++ { // 13 candidates x 5 default buckets > 64 attempts.
+		secrets[fmt.Sprintf("client-%d", i)] = []byte("0123456789abcdef0123456789abcdef")
 	}
 	err := (ServerConfig{ServerPort: 443, Secrets: secrets, EnvelopeV2: EnvelopeV2Config{HintMode: HintModeNone}}).Validate()
 	if !errors.Is(err, ErrHintModeNoneTooBroad) {
 		t.Fatalf("Validate err = %v, want ErrHintModeNoneTooBroad", err)
+	}
+}
+
+func TestServerConfigAllowsHintModeNoneWithinTotalAttemptBudget(t *testing.T) {
+	secrets := StaticSecrets{"client": []byte("0123456789abcdef0123456789abcdef")}
+	err := (ServerConfig{ServerPort: 443, Secrets: secrets, EnvelopeV2: EnvelopeV2Config{HintMode: HintModeNone, FrameSizeBuckets: []int{128}}, MaxAuthAttempts: 1}).Validate()
+	if err != nil {
+		t.Fatalf("Validate err = %v", err)
 	}
 }
 

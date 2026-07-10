@@ -58,7 +58,17 @@ type Gate struct {
 	wg        sync.WaitGroup
 	closeOnce sync.Once
 	closeErr  error
+	started   bool
+	closed    bool
 }
+
+var (
+	// ErrGateStarted means a Gate has already been used to wrap or create a
+	// listener. A Gate owns listener, knock, timer, and firewall cleanup state
+	// for one lifetime only.
+	ErrGateStarted = errors.New("gate has already started")
+	ErrGateClosed  = errors.New("gate is closed")
+)
 
 type managedListener struct {
 	net.Listener
@@ -153,7 +163,11 @@ func (g *Gate) Listen(ctx context.Context) (net.Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	return g.Wrap(ctx, ln)
+	wrapped, err := g.Wrap(ctx, ln)
+	if err != nil {
+		_ = ln.Close()
+	}
+	return wrapped, err
 }
 
 func (g *Gate) Wrap(ctx context.Context, ln net.Listener) (net.Listener, error) {
@@ -162,6 +176,9 @@ func (g *Gate) Wrap(ctx context.Context, ln net.Listener) (net.Listener, error) 
 	}
 	if ln == nil {
 		return nil, errors.New("gate listener is nil")
+	}
+	if err := g.beginLifecycle(); err != nil {
+		return nil, err
 	}
 	if err := g.configureFirewallPort(gatewaycore.ListenerPort(ln.Addr())); err != nil {
 		_ = ln.Close()
@@ -222,6 +239,7 @@ func (g *Gate) Wrap(ctx context.Context, ln net.Listener) (net.Listener, error) 
 func (g *Gate) Close(ctx context.Context) error {
 	g.closeOnce.Do(func() {
 		g.mu.Lock()
+		g.closed = true
 		cancel := g.cancel
 		g.mu.Unlock()
 		if cancel != nil {
@@ -236,6 +254,19 @@ func (g *Gate) Close(ctx context.Context) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return g.closeErr
+}
+
+func (g *Gate) beginLifecycle() error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.closed {
+		return ErrGateClosed
+	}
+	if g.started {
+		return ErrGateStarted
+	}
+	g.started = true
+	return nil
 }
 
 func (g *Gate) requiresFirewallCleanup() bool {

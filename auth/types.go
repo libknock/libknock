@@ -267,11 +267,28 @@ func (c ServerConfig) Validate() error {
 		if err := c.EnvelopeV2.WithDefaults().Validate(c.MaxFrameSize); err != nil {
 			return err
 		}
-		if c.EnvelopeV2.WithDefaults().HintMode == protocol.EnvelopeV2HintModeNone && staticCandidateCount(c.Secrets) >= c.MaxAuthAttempts {
+		if c.EnvelopeV2.WithDefaults().HintMode == protocol.EnvelopeV2HintModeNone && envelopeV2NoneAttemptCost(c.Secrets, c.EnvelopeV2, c.MaxFrameSize) > c.MaxAuthAttempts {
 			return ErrHintModeNoneTooBroad
 		}
 	}
 	return nil
+}
+
+// envelopeV2NoneAttemptCost is the worst-case number of authenticated decrypt
+// attempts for a hint-free envelope. Every configured frame-size bucket can
+// require trying every candidate before the frame is rejected.
+func envelopeV2NoneAttemptCost(resolver SecretResolver, envelope EnvelopeV2Config, maxFrameSize int) int {
+	candidates := staticCandidateCount(resolver)
+	if candidates == 0 {
+		return 0
+	}
+	buckets := 0
+	for _, bucket := range protocol.EnvelopeV2Buckets(envelope.WithDefaults().FrameSizeBuckets) {
+		if bucket <= maxFrameSize {
+			buckets++
+		}
+	}
+	return candidates * buckets
 }
 
 func staticCandidateCount(resolver SecretResolver) int {

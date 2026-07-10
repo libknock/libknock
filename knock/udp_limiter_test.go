@@ -3,6 +3,7 @@ package knock
 import (
 	"context"
 	"net"
+	"runtime"
 	"testing"
 	"time"
 
@@ -46,6 +47,34 @@ func TestUDPPacketLimiterPreventsReplayMark(t *testing.T) {
 		t.Fatalf("Serve err = %v, want context canceled", err)
 	}
 }
+
+func TestUDPListenerServeDoesNotRetainContextWatcherAfterReadFailure(t *testing.T) {
+	baseline := runtime.NumGoroutine()
+	for range 32 {
+		listener := &udpListener{conn: failingPacketConn{}, opts: ListenOptions{Clients: []ClientSecret{{ClientID: "client", Secret: []byte("0123456789abcdef0123456789abcdef")}}}}
+		if err := listener.Serve(context.Background(), func(Event) {}); err == nil {
+			t.Fatal("Serve succeeded with failing packet connection")
+		}
+	}
+	deadline := time.Now().Add(time.Second)
+	for runtime.NumGoroutine() > baseline+8 && time.Now().Before(deadline) {
+		runtime.Gosched()
+		time.Sleep(time.Millisecond)
+	}
+	if got := runtime.NumGoroutine(); got > baseline+8 {
+		t.Fatalf("context watcher goroutines leaked: got %d, baseline %d", got, baseline)
+	}
+}
+
+type failingPacketConn struct{}
+
+func (failingPacketConn) ReadFrom([]byte) (int, net.Addr, error) { return 0, nil, net.ErrClosed }
+func (failingPacketConn) WriteTo([]byte, net.Addr) (int, error)  { return 0, net.ErrClosed }
+func (failingPacketConn) Close() error                           { return nil }
+func (failingPacketConn) LocalAddr() net.Addr                    { return &net.UDPAddr{} }
+func (failingPacketConn) SetDeadline(time.Time) error            { return nil }
+func (failingPacketConn) SetReadDeadline(time.Time) error        { return nil }
+func (failingPacketConn) SetWriteDeadline(time.Time) error       { return nil }
 
 func TestUDPPacketLimiterRunsBeforeOpen(t *testing.T) {
 	secret := []byte("0123456789abcdef0123456789abcdef")

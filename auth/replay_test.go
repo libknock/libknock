@@ -43,12 +43,37 @@ func TestReplayCacheSweepsPeriodicallyNotEveryCall(t *testing.T) {
 	}
 }
 
+type typedNilReplayCache struct{}
+
+func (*typedNilReplayCache) CheckAndMark(string, []byte) error { return nil }
+
 func TestServerAuthRequiresExplicitReplayCache(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
 	defer clientConn.Close()
 	_, _, err := ServerAuth(context.Background(), serverConn, ServerConfig{ServerPort: 443, Secrets: StaticSecrets{"client": []byte("0123456789abcdef0123456789abcdef")}, AuthTimeout: time.Second})
 	if !errors.Is(err, ErrMissingReplayCache) {
 		t.Fatalf("ServerAuth err = %v, want missing replay cache", err)
+	}
+}
+
+func TestServerAuthRejectsTypedNilReplayCache(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	var cache *typedNilReplayCache
+	_, _, err := ServerAuth(context.Background(), serverConn, ServerConfig{ServerPort: 443, Secrets: StaticSecrets{"client": []byte("0123456789abcdef0123456789abcdef")}, ReplayCache: cache, AuthTimeout: time.Second})
+	if !errors.Is(err, ErrMissingReplayCache) {
+		t.Fatalf("ServerAuth err = %v, want missing replay cache", err)
+	}
+}
+
+func TestNewServerReplacesTypedNilReplayCache(t *testing.T) {
+	var cache *typedNilReplayCache
+	server, err := NewServer(ServerConfig{ServerPort: 443, Secrets: StaticSecrets{"client": []byte("0123456789abcdef0123456789abcdef")}, ReplayCache: cache})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasReplayCache(server.cfg.ReplayCache) {
+		t.Fatal("NewServer retained typed-nil replay cache")
 	}
 }
 

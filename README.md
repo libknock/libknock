@@ -167,6 +167,8 @@ The frame carries authenticated metadata such as client identity hash, method, t
 
 For most deployments, start with UDP knock before considering passive or raw-packet methods.
 
+`cmd/knock-proxy` also defaults an omitted `knock.method` to `udp` for both client and server. Deployments that require raw TCP SYN knocks must set `knock.method: tcp-syn` explicitly; see [migration notes](MIGRATION.md#configuration-hardening-and-default-knock-method).
+
 ## Capability status
 
 | Capability | Status |

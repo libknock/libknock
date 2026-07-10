@@ -4,9 +4,12 @@ import (
 	"context"
 	"crypto/rand"
 	"net"
+	"sync"
 
 	"github.com/libknock/libknock/auth"
 )
+
+var sessionBoundKnockSenderMu sync.Mutex
 
 type ContextDialer interface {
 	DialContext(ctx context.Context, network, address string) (net.Conn, error)
@@ -33,9 +36,17 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 			}
 		}
 		if setter, ok := cfg.Knock.(auth.SessionBoundKnockSender); ok {
+			// SetSessionID and Knock are a legacy two-step public interface.
+			// Serialize the pair to preserve its session binding when one Dialer
+			// is used by several concurrent local connections.
+			sessionBoundKnockSenderMu.Lock()
 			setter.SetSessionID(cfg.SessionID)
-		}
-		if err := cfg.Knock.Knock(ctx); err != nil {
+			err := cfg.Knock.Knock(ctx)
+			sessionBoundKnockSenderMu.Unlock()
+			if err != nil {
+				return nil, err
+			}
+		} else if err := cfg.Knock.Knock(ctx); err != nil {
 			return nil, err
 		}
 	}

@@ -3,7 +3,7 @@ module github.com/libknock/libknock/test/integration/grpc
 go 1.24.0
 
 require (
-	github.com/libknock/libknock v0.1.0-rc3.1
+	github.com/libknock/libknock v0.1.0-rc3.4
 	google.golang.org/grpc v1.75.1
 	google.golang.org/protobuf v1.36.8
 )

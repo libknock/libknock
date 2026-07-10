@@ -1,13 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -182,7 +183,18 @@ func loadConfig(path string) (fileConfig, error) {
 	if err := rejectLegacyKnockConfig(data); err != nil {
 		return cfg, err
 	}
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&cfg); err != nil {
+		return cfg, err
+	}
+	if err := decoder.Decode(&yaml.Node{}); err != io.EOF {
+		if err == nil {
+			return cfg, errors.New("config must contain exactly one YAML document")
+		}
+		return cfg, err
+	}
+	if err := validateNonNegativeConfig(cfg); err != nil {
 		return cfg, err
 	}
 	return cfg, nil
@@ -278,7 +290,7 @@ func (c fileConfig) serverRuntime() (serverRuntime, error) {
 	if port != listenPort {
 		return serverRuntime{}, fmt.Errorf("firewall.port (%d) must match server.tcp_listen port (%d)", port, listenPort)
 	}
-	method := normalizeKnockMethod(defaultString(c.Knock.Method, "tcp-syn"))
+	method := normalizeKnockMethod(defaultString(c.Knock.Method, knock.UDPMethod))
 	if !isKnockMethod(method) {
 		return serverRuntime{}, fmt.Errorf("unsupported knock.method %q", method)
 	}
@@ -394,7 +406,7 @@ func (c fileConfig) clientRuntime() (clientRuntime, error) {
 	if udpPort > 0 {
 		udpAddr = net.JoinHostPort(host, strconv.Itoa(udpPort))
 	}
-	method := normalizeKnockMethod(defaultString(c.Knock.Method, defaultClientKnockMethod(runtime.GOOS)))
+	method := normalizeKnockMethod(defaultString(c.Knock.Method, knock.UDPMethod))
 	if !isKnockMethod(method) {
 		return clientRuntime{}, fmt.Errorf("unsupported knock.method %q", method)
 	}
@@ -421,6 +433,9 @@ func (c fileConfig) clientRuntime() (clientRuntime, error) {
 }
 
 func parseSecret(value, file string) ([]byte, error) {
+	if value != "" && file != "" {
+		return nil, errors.New("secret and secret_file are mutually exclusive")
+	}
 	if file != "" {
 		data, err := os.ReadFile(file)
 		if err != nil {
@@ -609,6 +624,44 @@ func defaultString(v, fallback string) string {
 	}
 	return v
 }
+
+func validateNonNegativeConfig(c fileConfig) error {
+	for path, value := range map[string]int{
+		"client.protected_tcp_port":          c.Client.ProtectedTCPPort,
+		"access.max_connections_per_knock":   c.Access.MaxConnectionsPerKnock,
+		"knock.max_frame_size":               c.Knock.MaxFrameSize,
+		"knock.sequence_max_parts":           c.Knock.SequenceMaxParts,
+		"knock.udp_port":                     c.Knock.UDPPort,
+		"knock.udp_knock_port":               c.Knock.UDPKnockPort,
+		"knock.timeout_seconds":              c.Knock.TimeoutSeconds,
+		"knock.retry":                        c.Knock.Retry,
+		"knock.time_window_seconds":          c.Knock.TimeWindowSeconds,
+		"knock.sequence.length":              c.Knock.Sequence.Length,
+		"knock.sequence.slot_seconds":        c.Knock.Sequence.SlotSeconds,
+		"knock.sequence.max_inflight_per_ip": c.Knock.Sequence.MaxInflightPerIP,
+		"knock.sequence.max_total_inflight":  c.Knock.Sequence.MaxTotalInflight,
+		"auth.time_window_seconds":           c.Auth.TimeWindowSeconds,
+		"auth.nonce_cache_seconds":           c.Auth.NonceCacheSeconds,
+		"firewall.port":                      c.Firewall.Port,
+		"firewall.allow_seconds":             c.Firewall.AllowSeconds,
+		"limits.max_pending_auth":            c.Limits.MaxPendingAuth,
+		"limits.max_auth_workers":            c.Limits.MaxAuthWorkers,
+		"timeouts.connect_seconds":           c.Timeouts.ConnectSeconds,
+		"timeouts.upstream_connect_seconds":  c.Timeouts.UpstreamConnectSeconds,
+		"timeouts.auth_seconds":              c.Timeouts.AuthSeconds,
+		"timeouts.idle_seconds":              c.Timeouts.IdleSeconds,
+	} {
+		if value < 0 {
+			return fmt.Errorf("%s must not be negative", path)
+		}
+	}
+	for i, client := range c.Auth.Clients {
+		if client.MaxConnections < 0 {
+			return fmt.Errorf("auth.clients[%d].max_connections must not be negative", i)
+		}
+	}
+	return nil
+}
 func normalizeKnockMethod(method string) string {
 	switch method {
 	case "udp-sequence":
@@ -626,10 +679,4 @@ func isKnockMethod(method string) bool {
 	default:
 		return false
 	}
-}
-func defaultClientKnockMethod(goos string) string {
-	if goos == "windows" || goos == "darwin" {
-		return knock.UDPMethod
-	}
-	return knock.TCPSYNMethod
 }

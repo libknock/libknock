@@ -36,6 +36,12 @@ The command entrypoint owns:
 - product-level defaults
 - adapter wiring
 
+## Configuration hardening and default knock method
+
+`cmd/knock-proxy` accepts exactly one YAML document and rejects unknown fields. Correct configuration-key typos before upgrading; they are no longer ignored. Numeric configuration values must be zero or positive, and `secret` and `secret_file` are mutually exclusive for both `client` and each `auth.clients[]` entry.
+
+When `knock.method` is omitted, both client and server now select `udp`. Earlier compatibility-command defaults could select `tcp-syn` on some platforms. Set `knock.method: tcp-syn` explicitly before upgrading if that raw-packet behavior is required. The UDP listener defaults to the protected TCP port unless `knock.udp_listen`, `knock.udp_knock_port`, or `knock.udp_port` sets another port.
+
 SDK packages own:
 
 - TCP auth protocols

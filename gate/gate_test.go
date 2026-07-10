@@ -3,6 +3,7 @@ package gate
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
 	"net"
 	"net/netip"
@@ -338,6 +339,43 @@ func TestManagedListenerCloseStopsGateResources(t *testing.T) {
 		t.Fatalf("knock listener still bound at %s: %v", knockAddr, err)
 	}
 	_ = conn.Close()
+}
+
+func TestGateHasSingleListenerLifecycle(t *testing.T) {
+	secret := testSecret()
+	g, err := New(Config{Mode: AuthOnly, Auth: auth.ServerConfig{Secrets: auth.StaticSecrets{"client": secret}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrapped, err := g.Wrap(context.Background(), first)
+	if err != nil {
+		_ = first.Close()
+		t.Fatal(err)
+	}
+	defer wrapped.Close()
+	second, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer second.Close()
+	if _, err := g.Wrap(context.Background(), second); !errors.Is(err, ErrGateStarted) {
+		t.Fatalf("second Wrap error = %v, want ErrGateStarted", err)
+	}
+	if err := wrapped.Close(); err != nil {
+		t.Fatal(err)
+	}
+	third, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer third.Close()
+	if _, err := g.Wrap(context.Background(), third); !errors.Is(err, ErrGateClosed) {
+		t.Fatalf("Wrap after Close error = %v, want ErrGateClosed", err)
+	}
 }
 
 func TestKnockAuthOnlyRequiresPriorKnock(t *testing.T) {

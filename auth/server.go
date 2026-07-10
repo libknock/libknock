@@ -29,7 +29,7 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 	if cfg.Secrets == nil {
 		return nil, ErrMissingSecretResolver
 	}
-	if cfg.ReplayCache == nil {
+	if !hasReplayCache(cfg.ReplayCache) {
 		cfg.ReplayCache = NewMemoryReplayCache(cfg.TimeWindow * 2)
 	}
 	return &Server{cfg: cfg}, nil
@@ -56,7 +56,7 @@ func ServerAuth(ctx context.Context, conn net.Conn, cfg ServerConfig) (net.Conn,
 		_ = conn.Close()
 		return nil, nil, err
 	}
-	if cfg.ReplayCache == nil {
+	if !hasReplayCache(cfg.ReplayCache) {
 		_ = conn.Close()
 		return nil, nil, ErrMissingReplayCache
 	}

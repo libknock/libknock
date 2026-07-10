@@ -2,6 +2,7 @@ package relay
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -77,6 +78,59 @@ func TestGatewayRelaysAuthenticatedTCP(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("gateway did not stop")
+	}
+}
+
+func TestGatewayCancelClosesActiveRelayConnections(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	upstream, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer upstream.Close()
+	upstreamAccepted := make(chan net.Conn, 1)
+	go func() {
+		conn, err := upstream.Accept()
+		if err == nil {
+			upstreamAccepted <- conn
+		}
+	}()
+
+	reserved, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	listen := reserved.Addr().String()
+	_ = reserved.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Gateway{
+			Listen:   listen,
+			Upstream: upstream.Addr().String(),
+			Auth:     auth.ServerConfig{ServerPort: mustPort(t, listen), Secrets: auth.StaticSecrets{"client": secret}},
+		}.Run(ctx)
+	}()
+	waitTCP(t, listen)
+	client, err := (&netx.Dialer{Config: auth.ClientConfig{ClientID: "client", Secret: secret, ServerPort: mustPort(t, listen)}}).DialContext(context.Background(), "tcp", listen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	select {
+	case conn := <-upstreamAccepted:
+		defer conn.Close()
+	case <-time.After(time.Second):
+		t.Fatal("upstream did not receive relayed connection")
+	}
+	cancel()
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("gateway did not stop after cancellation with active relay")
 	}
 }
 
@@ -394,13 +448,18 @@ func TestGatewayListenKnockTimerRevokeUsesDetachedContext(t *testing.T) {
 type gatewayEventRecorder struct {
 	mu     sync.Mutex
 	errors []RelayErrorEvent
+	ok     []RelayEvent
 }
 
 func (r *gatewayEventRecorder) OnKnockOK(KnockEvent)               {}
 func (r *gatewayEventRecorder) OnKnockFail(KnockFailEvent)         {}
 func (r *gatewayEventRecorder) OnFirewallAllow(FirewallEvent)      {}
 func (r *gatewayEventRecorder) OnFirewallError(FirewallErrorEvent) {}
-func (r *gatewayEventRecorder) OnRelayOK(RelayEvent)               {}
+func (r *gatewayEventRecorder) OnRelayOK(ev RelayEvent) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.ok = append(r.ok, ev)
+}
 func (r *gatewayEventRecorder) OnRelayError(ev RelayErrorEvent) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -415,6 +474,66 @@ func (r *gatewayEventRecorder) hasRelayError(stage string) bool {
 		}
 	}
 	return false
+}
+
+func (r *gatewayEventRecorder) relayOKCount() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.ok)
+}
+
+func TestGatewayReportsUnexpectedRelayCopyError(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	upstream, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer upstream.Close()
+	upstreamDone := make(chan struct{})
+	defer close(upstreamDone)
+	go func() {
+		conn, err := upstream.Accept()
+		if err == nil {
+			defer conn.Close()
+			<-upstreamDone
+		}
+	}()
+	reserved, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	listen := reserved.Addr().String()
+	_ = reserved.Close()
+	rec := &gatewayEventRecorder{}
+	copyErr := errors.New("injected copy failure")
+	oldBidirectional := bidirectionalContext
+	bidirectionalContext = func(context.Context, net.Conn, net.Conn, time.Duration) (Stats, error) {
+		return Stats{}, copyErr
+	}
+	defer func() { bidirectionalContext = oldBidirectional }()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Gateway{Listen: listen, Upstream: upstream.Addr().String(), Auth: auth.ServerConfig{ServerPort: mustPort(t, listen), Secrets: auth.StaticSecrets{"client": secret}}, Events: rec}.Run(ctx)
+	}()
+	waitTCP(t, listen)
+	conn, err := (&netx.Dialer{Config: auth.ClientConfig{ClientID: "client", Secret: secret, ServerPort: mustPort(t, listen)}}).DialContext(context.Background(), "tcp", listen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if rec.hasRelayError("relay") {
+			if rec.relayOKCount() != 0 {
+				t.Fatal("RelayOK emitted for unexpected copy error")
+			}
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("relay copy error was not reported")
 }
 
 func TestGatewayRunStopsWhenKnockListenerFails(t *testing.T) {
@@ -464,6 +583,32 @@ func TestGatewayRunStopsWhenKnockListenerFails(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatal("tcp listener still accepted connections after knock listener failure")
+}
+
+func TestGatewayRunPropagatesKnockFailureDuringShutdown(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	holdUDP, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer holdUDP.Close()
+	gatewayLn, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	listen := gatewayLn.Addr().String()
+	_ = gatewayLn.Close()
+	g := Gateway{
+		Listen:       listen,
+		Upstream:     "127.0.0.1:1",
+		Auth:         auth.ServerConfig{ServerPort: mustPort(t, listen), Secrets: auth.StaticSecrets{"client": secret}},
+		KnockMethod:  "udp",
+		KnockListen:  holdUDP.LocalAddr().String(),
+		KnockClients: []knock.ClientSecret{{ClientID: "client", Secret: secret}},
+	}
+	if err := g.Run(context.Background()); err == nil {
+		t.Fatal("expected knock listener error to be returned")
+	}
 }
 
 func TestGatewayRejectsDropUDPForActiveUDP(t *testing.T) {

@@ -182,7 +182,7 @@ Then complete the environment checks in [Release checklist](release-checklist.md
 
 ## Policy cache boundaries
 
-Replay caches, knock session stores, ban lists, and rate limiters have related storage mechanics but different security semantics. `TTLLRU.Len()` reports stored entries and may include expired entries that have not been swept yet; use active counts or sweep-aware metrics when reporting pressure. Replay caches and rate limiters fail closed at capacity, while ban/session stores remain bounded TTL stores. Script firewall backends validate configured commands during `Init()` without executing allow/revoke/cleanup scripts.
+Replay caches, knock session stores, ban lists, and rate limiters have related storage mechanics but different security semantics. `TTLLRU.Len()` reports stored entries and may include expired entries that have not been swept yet; use active counts or sweep-aware metrics when reporting pressure. Replay caches, rate limiters, and ban lists fail closed at capacity. Ban lists preserve active bans instead of LRU-evicting them; callers that need a capacity signal can use `BanE`/`BanUntilE` and handle `ErrBanListFull`. Script firewall backends validate configured commands during `Init()` without executing allow/revoke/cleanup scripts.
 
 Replay caches, knock session stores, ban lists, and rate limiters have related storage mechanics but different security semantics. Replay cache entries reject duplicate authentication material, knock sessions bind a prior knock to a later TCP auth event, ban lists are TTL sets for coarse policy decisions, and limiters maintain counting windows. Do not merge these concepts in production configuration or observability just because they share an internal eviction primitive.
 

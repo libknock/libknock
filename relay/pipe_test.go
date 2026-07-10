@@ -1,6 +1,9 @@
 package relay
 
 import (
+	"context"
+	"errors"
+	"io"
 	"net"
 	"sync/atomic"
 	"testing"
@@ -46,5 +49,29 @@ func TestCloseReadFallsBackToClose(t *testing.T) {
 	closeRead(conn)
 	if !conn.closed.Load() {
 		t.Fatal("Close was not called for conn without CloseRead")
+	}
+}
+
+type copyErrorConn struct {
+	pipeTestConn
+	err error
+}
+
+func (c *copyErrorConn) Read([]byte) (int, error) { return 0, c.err }
+
+func TestBidirectionalContextReturnsUnexpectedCopyError(t *testing.T) {
+	want := errors.New("injected copy failure")
+	stats, err := BidirectionalContext(context.Background(), &copyErrorConn{err: want}, &copyErrorConn{err: io.EOF}, 0)
+	if !errors.Is(err, want) {
+		t.Fatalf("BidirectionalContext err = %v, want %v", err, want)
+	}
+	if stats.RX != 0 || stats.TX != 0 {
+		t.Fatalf("stats = %+v, want zero", stats)
+	}
+}
+
+func TestRelayCopyErrorIgnoresExpectedCloseErrors(t *testing.T) {
+	if err := relayCopyError(io.EOF, net.ErrClosed); err != nil {
+		t.Fatalf("relayCopyError = %v, want nil", err)
 	}
 }

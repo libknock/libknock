@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Aligned nested Prometheus, gRPC example, and gRPC integration modules with the current `v0.1.0-rc3.3` root release.
+- Stopped UDP listener context watchers when serving exits for a non-context error.
+- Made bounded ban lists preserve active bans and fail closed at capacity; `BanE` and `BanUntilE` expose `ErrBanListFull` for callers that need an explicit result.
+- Made each `gate.Gate` a single listener lifecycle; a second start returns `ErrGateStarted`, and starts after shutdown return `ErrGateClosed`.
+
 ## v0.1.0-rc3.3 - 2026-05-23
 
 See [docs/release-notes/v0.1.0-rc3.3.md](docs/release-notes/v0.1.0-rc3.3.md).

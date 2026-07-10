@@ -53,6 +53,55 @@ func TestAuthenticatedListenerDoesNotHeadOfLineBlockOnSlowAuth(t *testing.T) {
 	}
 }
 
+type atomicSessionKnocker struct {
+	mu       sync.Mutex
+	current  []byte
+	sessions map[string]int
+}
+
+func (k *atomicSessionKnocker) SetSessionID(sessionID []byte) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	k.current = append(k.current[:0], sessionID...)
+}
+func (k *atomicSessionKnocker) Knock(context.Context) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	if k.sessions == nil {
+		k.sessions = make(map[string]int)
+	}
+	k.sessions[string(k.current)]++
+	return nil
+}
+
+func TestDialerSerializesLegacySessionKnockSenderForConcurrentDials(t *testing.T) {
+	secret := []byte("0123456789abcdef0123456789abcdef")
+	knocker := &atomicSessionKnocker{}
+	d := Dialer{Base: &net.Dialer{}, Config: auth.ClientConfig{ClientID: "client", Secret: secret, ServerPort: 443, Knock: knocker}}
+	// Canceled contexts prove the legacy SetSessionID + Knock pair is invoked
+	// before the base dialer without sharing a one-shot net.Pipe across dials.
+	const dials = 32
+	var wg sync.WaitGroup
+	for range dials {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			if _, err := d.DialContext(ctx, "tcp", "ignored"); err == nil {
+				t.Error("DialContext unexpectedly succeeded with canceled context")
+			}
+		}()
+	}
+	wg.Wait()
+	knocker.mu.Lock()
+	got := len(knocker.sessions)
+	knocker.mu.Unlock()
+	if got != dials {
+		t.Fatalf("knock sessions = %d, want %d", got, dials)
+	}
+}
+
 func TestNilListenerReturnsError(t *testing.T) {
 	secret := []byte("0123456789abcdef0123456789abcdef")
 	cfg := ListenerConfig{Auth: auth.ServerConfig{ServerPort: 443, Secrets: auth.StaticSecrets{"client": secret}}}

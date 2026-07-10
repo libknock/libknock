@@ -341,6 +341,9 @@ func ipv6Enabled(cfg Config, backend string) bool {
 	if cfg.EnableIPv6 != nil {
 		return *cfg.EnableIPv6
 	}
+	if backend == "nftables" {
+		return true
+	}
 	return firewallCommandExists(cfg, "ip6tables")
 }
 

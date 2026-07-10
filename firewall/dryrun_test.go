@@ -35,6 +35,34 @@ func TestDryRunNftablesCommands(t *testing.T) {
 	}
 }
 
+func TestNftablesExplicitIPv6DisableOmitsIPv6ObjectsAndRules(t *testing.T) {
+	disabled := false
+	r := &firewallDryRunRunner{}
+	fw := NewNftables(Config{Port: 9443, Runner: r, EnableIPv6: &disabled}, "nftables")
+	if err := fw.Init(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(r.inputs, "\n")
+	if strings.Contains(joined, "ipv6_addr") || strings.Contains(joined, "ip6 saddr") || strings.Contains(joined, "allowed_clients_v6") {
+		t.Fatalf("IPv6 objects/rules present with IPv6 disabled:\n%s", joined)
+	}
+	if err := fw.Allow(context.Background(), netip.MustParseAddr("2001:db8::1"), 9443, time.Second); err == nil || !strings.Contains(err.Error(), "IPv6") {
+		t.Fatalf("Allow IPv6 err = %v, want unsupported error", err)
+	}
+}
+
+func TestNftablesDefaultsToIPv6WithoutIptables(t *testing.T) {
+	r := &firewallDryRunRunner{failVersion: map[string]bool{"ip6tables": true}}
+	fw := NewNftables(Config{Port: 9443, Runner: r}, "nftables")
+	if err := fw.Init(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(r.inputs, "\n")
+	if !strings.Contains(joined, "type ipv6_addr") || !strings.Contains(joined, "ip6 saddr") {
+		t.Fatalf("default nftables IPv6 objects/rules missing:\n%s", joined)
+	}
+}
+
 func TestDryRunIptablesCommands(t *testing.T) {
 	r := &firewallDryRunRunner{failVersion: map[string]bool{"ip6tables": true}}
 	fw := NewIptables(Config{Port: 9443, Runner: r, DropUDPKnockPort: true, UDPKnockPort: 10000})

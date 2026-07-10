@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/hex"
+	"reflect"
 	"sync"
 	"time"
 
@@ -9,6 +10,19 @@ import (
 )
 
 const DefaultReplayCacheMaxEntries = 65536
+
+func hasReplayCache(cache ReplayCache) bool {
+	if cache == nil {
+		return false
+	}
+	value := reflect.ValueOf(cache)
+	switch value.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return !value.IsNil()
+	default:
+		return true
+	}
+}
 
 // MemoryReplayCache stores accepted auth nonces by client. It shares the internal TTL/LRU primitive with other bounded stores, but keeps replay-specific keying and duplicate semantics here.
 type MemoryReplayCache struct {
