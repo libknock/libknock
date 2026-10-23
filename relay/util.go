@@ -14,6 +14,9 @@ func (g *Gateway) maxPendingAuth() int {
 	}
 	return 128
 }
+func (g *Gateway) maxPendingAuthPerSource() int {
+	return g.MaxPendingAuthPerSource
+}
 func (g *Gateway) maxAuthWorkers() int {
 	if g.MaxAuthWorkers > 0 {
 		return g.MaxAuthWorkers

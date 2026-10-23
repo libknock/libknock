@@ -19,8 +19,10 @@ func TestPolicyKeyNormalizesIPAddresses(t *testing.T) {
 	}{
 		{&net.TCPAddr{IP: net.ParseIP("192.0.2.1"), Port: 10001}, "192.0.2.1"},
 		{&net.UDPAddr{IP: net.ParseIP("192.0.2.1"), Port: 20002}, "192.0.2.1"},
-		{&net.TCPAddr{IP: net.ParseIP("2001:db8::1"), Port: 10001}, "2001:db8::1"},
-		{&net.UDPAddr{IP: net.ParseIP("2001:db8::1"), Port: 20002}, "2001:db8::1"},
+		{&net.TCPAddr{IP: net.ParseIP("2001:db8::1"), Port: 10001}, "2001:db8::/64"},
+		{&net.UDPAddr{IP: net.ParseIP("2001:db8::1"), Port: 20002}, "2001:db8::/64"},
+		{&net.TCPAddr{IP: net.ParseIP("2001:db8::ffff:1"), Port: 10001}, "2001:db8::/64"},
+		{&net.TCPAddr{IP: net.ParseIP("::ffff:192.0.2.1"), Port: 10001}, "192.0.2.1"},
 		{mockNetAddr{network: "udp", address: "bad-address"}, "udp:bad-address"},
 	}
 	for _, tc := range cases {

@@ -91,6 +91,9 @@ func (b *BanList) IsBannedAt(key string, now time.Time) bool {
 	// A caller of the legacy Ban/BanUntil API cannot receive ErrBanListFull.
 	// While every slot contains an active ban, reject unknown keys instead of
 	// silently allowing an attempted ban that did not fit.
+	if b.entries.Len() < b.entries.Cap() {
+		return false
+	}
 	return b.entries.ActiveLen(now) >= b.entries.Cap()
 }
 

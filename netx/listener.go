@@ -9,6 +9,7 @@ import (
 
 	"github.com/libknock/libknock/auth"
 	"github.com/libknock/libknock/internal/acceptx"
+	"github.com/libknock/libknock/internal/iplimit"
 )
 
 const (
@@ -22,7 +23,13 @@ type ListenerConfig struct {
 	Auth           auth.ServerConfig
 	MaxPendingAuth int
 	MaxAuthWorkers int
-	Events         EventSink
+	// MaxPendingAuthPerSource caps how many connections from one source (an
+	// IPv4 address or an IPv6 /64) may be queued or authenticating at once.
+	// Zero or a negative value disables the cap (default, so clients behind a
+	// shared NAT are not throttled unless the operator opts in). A value below
+	// MaxAuthWorkers keeps one source from occupying the whole auth pool.
+	MaxPendingAuthPerSource int
+	Events                  EventSink
 }
 
 type errorListener struct {
@@ -62,6 +69,8 @@ type AuthenticatedListener struct {
 	mu             sync.Mutex
 	err            error
 	inFlight       map[net.Conn]struct{}
+	perSource      *iplimit.Limiter
+	releases       map[net.Conn]func()
 }
 
 func NewListener(ln net.Listener, cfg ListenerConfig) (*AuthenticatedListener, error) {
@@ -102,7 +111,7 @@ func WrapListenerWithConfigE(ln net.Listener, cfg ListenerConfig) (net.Listener,
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	l := &AuthenticatedListener{Listener: ln, Config: cfg.Auth, listenerConfig: cfg, server: server, ctx: ctx, cancel: cancel, ready: make(chan net.Conn), pending: make(chan net.Conn, cfg.MaxPendingAuth), done: make(chan struct{}), inFlight: make(map[net.Conn]struct{})}
+	l := &AuthenticatedListener{Listener: ln, Config: cfg.Auth, listenerConfig: cfg, server: server, ctx: ctx, cancel: cancel, ready: make(chan net.Conn), pending: make(chan net.Conn, cfg.MaxPendingAuth), done: make(chan struct{}), inFlight: make(map[net.Conn]struct{}), perSource: iplimit.New(cfg.MaxPendingAuthPerSource), releases: make(map[net.Conn]func())}
 	l.start()
 	return l, nil
 }
@@ -180,12 +189,21 @@ func (l *AuthenticatedListener) acceptLoop() {
 			return
 		}
 		backoff.Reset()
+		release, ok := l.perSource.Acquire(conn.RemoteAddr())
+		if !ok {
+			l.reportAuthDrop(conn.RemoteAddr(), ErrAuthSourceLimit)
+			_ = conn.Close()
+			continue
+		}
+		l.setRelease(conn, release)
 		select {
 		case l.pending <- conn:
 		case <-l.done:
+			l.releaseSource(conn)
 			_ = conn.Close()
 			return
 		default:
+			l.releaseSource(conn)
 			l.reportAuthDrop(conn.RemoteAddr(), ErrAuthBackpressure)
 			_ = conn.Close()
 		}
@@ -204,6 +222,7 @@ func (l *AuthenticatedListener) authWorker() {
 		l.trackInFlight(conn)
 		clean, err := l.authenticateConn(conn)
 		l.untrackInFlight(conn)
+		l.releaseSource(conn)
 		if err != nil {
 			continue
 		}
@@ -231,6 +250,22 @@ func (l *AuthenticatedListener) authenticateConn(conn net.Conn) (net.Conn, error
 		clean, _, err = auth.ServerAuth(authCtx, conn, l.listenerConfig.Auth)
 	}
 	return clean, err
+}
+
+func (l *AuthenticatedListener) setRelease(conn net.Conn, release func()) {
+	l.mu.Lock()
+	l.releases[conn] = release
+	l.mu.Unlock()
+}
+
+func (l *AuthenticatedListener) releaseSource(conn net.Conn) {
+	l.mu.Lock()
+	release := l.releases[conn]
+	delete(l.releases, conn)
+	l.mu.Unlock()
+	if release != nil {
+		release()
+	}
 }
 
 func (l *AuthenticatedListener) setErr(err error) {

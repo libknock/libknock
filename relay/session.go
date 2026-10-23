@@ -178,7 +178,8 @@ func (s *KnockSessionStore) MarkFirewall(remote netip.Addr, port int, ttl time.D
 		s.firewall.SetUntil(key, &firewallLease{id: id}, now.Add(ttl))
 		return id, true
 	}
-	if s.firewall.ActiveLen(now) >= s.firewall.Cap() {
+	// Sweep above removed expired leases, so Len is the exact active count.
+	if s.firewall.Len() >= s.firewall.Cap() {
 		return 0, false
 	}
 	s.nextID++

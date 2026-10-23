@@ -32,7 +32,10 @@ type Config struct {
 	DisableSessionBinding  bool
 	MaxPendingAuth         int
 	MaxAuthWorkers         int
-	Events                 EventSink
+	// MaxPendingAuthPerSource caps queued/in-progress auths per source (IPv4
+	// address or IPv6 /64). Zero or negative disables (opt-in; see netx).
+	MaxPendingAuthPerSource int
+	Events                  EventSink
 }
 
 func (c Config) WithDefaults() Config {
@@ -64,6 +67,6 @@ func NewGateway(cfg Config) *Gateway {
 		UpstreamConnectTimeout: cfg.UpstreamConnectTimeout, IdleTimeout: cfg.IdleTimeout,
 		RemoveAfterAuth: cfg.RemoveAfterAuth, MaxConnectionsPerKnock: cfg.MaxConnectionsPerKnock,
 		DisableSessionBinding: cfg.DisableSessionBinding, MaxPendingAuth: cfg.MaxPendingAuth,
-		MaxAuthWorkers: cfg.MaxAuthWorkers, Events: cfg.Events,
+		MaxAuthWorkers: cfg.MaxAuthWorkers, MaxPendingAuthPerSource: cfg.MaxPendingAuthPerSource, Events: cfg.Events,
 	}
 }

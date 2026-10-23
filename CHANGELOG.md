@@ -9,6 +9,12 @@
 - `ServerAuth` / `Server.Auth` no longer let a later caller context deadline extend `AuthTimeout`.
 - Authenticated listeners and the relay gateway retry transient `Accept` errors (for example `EMFILE`) with backoff instead of shutting down.
 - Removed dead code reported by staticcheck.
+- Policy rate-limit keys now group IPv6 sources by `/64` (and unmap IPv4-mapped addresses), so a single site cannot rotate addresses to evade limits or fill the limiter. Custom `auth.Policy` implementations will see keys like `2001:db8::/64` for IPv6 clients.
+- Added opt-in `MaxPendingAuthPerSource` (`netx.ListenerConfig`, `relay.Config`; `limits.max_pending_auth_per_source` in the compatibility cmd) to cap queued/in-progress auths per IPv4 address or IPv6 `/64`; drops are reported with `netx.ErrAuthSourceLimit`.
+- nftables `Allow` renews a lease in one atomic `nft -f` batch instead of a separate delete then add, removing the brief window where the client was absent from the allow set.
+- Replay, sequence, and ban caches use the O(1) entry count as a fast path and only sweep when near capacity, instead of an O(n) active scan on every call.
+- CI resolves the newest Go 1.24 patch (`check-latest`) and runs an informational `govulncheck`.
+- Documented that `knock-firewall-only` knocks are not bound to the sender IP and how to mitigate it.
 - Aligned nested Prometheus, gRPC example, and gRPC integration modules with the current `v0.1.0-rc3.3` root release.
 - Stopped UDP listener context watchers when serving exits for a non-context error.
 - Made bounded ban lists preserve active bans and fail closed at capacity; `BanE` and `BanUntilE` expose `ErrBanListFull` for callers that need an explicit result.

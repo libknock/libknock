@@ -11,6 +11,7 @@ import (
 	"github.com/libknock/libknock/firewall"
 	"github.com/libknock/libknock/internal/acceptx"
 	"github.com/libknock/libknock/internal/gatewaycore"
+	"github.com/libknock/libknock/internal/iplimit"
 	"github.com/libknock/libknock/internal/timerset"
 )
 
@@ -97,17 +98,20 @@ func (g *Gateway) run(ctx context.Context) error {
 		_ = ln.Close()
 		active.CloseAll()
 	}()
-	pending := make(chan net.Conn, g.maxPendingAuth())
+	pending := make(chan pendingConn, g.maxPendingAuth())
+	perSource := iplimit.New(g.maxPendingAuthPerSource())
 	var dropped atomic.Int64
 	for range g.maxAuthWorkers() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for conn := range pending {
+			for item := range pending {
+				conn := item.conn
 				// Only the auth phase runs on the bounded worker pool. A
 				// successfully authenticated session is relayed on its own
 				// goroutine so long-lived sessions cannot starve new auths.
 				session := g.authenticateConn(runCtx, conn, authCfg, fw, store)
+				item.release()
 				if session == nil {
 					active.Remove(conn)
 					continue
@@ -150,10 +154,23 @@ func (g *Gateway) run(ctx context.Context) error {
 			return err
 		}
 		backoff.Reset()
+		release, ok := perSource.Acquire(conn.RemoteAddr())
+		if !ok {
+			_ = conn.Close()
+			g.emitRelayError(RelayErrorEvent{
+				Remote:       conn.RemoteAddr(),
+				Stage:        "source_limit",
+				Err:          errors.New("auth per-source pending limit reached"),
+				DroppedCount: dropped.Add(1),
+				Pending:      len(pending),
+			})
+			continue
+		}
 		active.Add(conn)
 		select {
-		case pending <- conn:
+		case pending <- pendingConn{conn: conn, release: release}:
 		case <-runCtx.Done():
+			release()
 			active.Remove(conn)
 			_ = conn.Close()
 			if e := childErr.load(); e != nil {
@@ -161,6 +178,7 @@ func (g *Gateway) run(ctx context.Context) error {
 			}
 			return nil
 		default:
+			release()
 			active.Remove(conn)
 			_ = conn.Close()
 			g.emitRelayError(RelayErrorEvent{
@@ -172,6 +190,11 @@ func (g *Gateway) run(ctx context.Context) error {
 			})
 		}
 	}
+}
+
+type pendingConn struct {
+	conn    net.Conn
+	release func()
 }
 
 type activeConnections struct {
