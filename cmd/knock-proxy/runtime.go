@@ -38,27 +38,28 @@ func buildServer(cfg fileConfig) (relay.Gateway, runSummary, error) {
 		return relay.Gateway{}, runSummary{}, fmt.Errorf("firewall: %w", err)
 	}
 	g := relay.Gateway{
-		Listen:                 rt.Listen,
-		Upstream:               rt.Upstream,
-		Auth:                   auth.ServerConfig{ServerPort: rt.Port, Secrets: auth.NewStaticSecretResolver(rt.Secrets), ReplayCache: auth.NewMemoryReplayCache(rt.NonceCacheTTL), AuthTimeout: rt.AuthTimeout, TimeWindow: rt.AuthTimeWindow},
-		Firewall:               fw,
-		KnockMethod:            rt.KnockMethod,
-		KnockListen:            rt.KnockListen,
-		KnockPort:              rt.KnockPort,
-		KnockClients:           rt.KnockClients,
-		KnockTimeWindow:        rt.KnockTimeWindow,
-		KnockMaxFrameSize:      rt.KnockMaxFrameSize,
-		KnockSequence:          rt.Sequence,
-		KnockNonceTTL:          rt.NonceTTL,
-		AllowTTL:               rt.AllowTTL,
-		UpstreamConnectTimeout: rt.UpstreamConnectTimeout,
-		IdleTimeout:            rt.IdleTimeout,
-		RemoveAfterAuth:        rt.RemoveAfterAuth,
-		MaxConnectionsPerKnock: rt.MaxConnectionsPerKnock,
-		DisableSessionBinding:  rt.DisableSessionBinding,
-		MaxPendingAuth:         rt.MaxPendingAuth,
-		MaxAuthWorkers:         rt.MaxAuthWorkers,
-		Events:                 textEvents{},
+		Listen:                  rt.Listen,
+		Upstream:                rt.Upstream,
+		Auth:                    auth.ServerConfig{ServerPort: rt.Port, Secrets: auth.NewStaticSecretResolver(rt.Secrets), ReplayCache: auth.NewMemoryReplayCache(authReplayTTL(rt.NonceCacheTTL, rt.AuthTimeWindow)), AuthTimeout: rt.AuthTimeout, TimeWindow: rt.AuthTimeWindow},
+		Firewall:                fw,
+		KnockMethod:             rt.KnockMethod,
+		KnockListen:             rt.KnockListen,
+		KnockPort:               rt.KnockPort,
+		KnockClients:            rt.KnockClients,
+		KnockTimeWindow:         rt.KnockTimeWindow,
+		KnockMaxFrameSize:       rt.KnockMaxFrameSize,
+		KnockSequence:           rt.Sequence,
+		KnockNonceTTL:           rt.NonceTTL,
+		AllowTTL:                rt.AllowTTL,
+		UpstreamConnectTimeout:  rt.UpstreamConnectTimeout,
+		IdleTimeout:             rt.IdleTimeout,
+		RemoveAfterAuth:         rt.RemoveAfterAuth,
+		MaxConnectionsPerKnock:  rt.MaxConnectionsPerKnock,
+		DisableSessionBinding:   rt.DisableSessionBinding,
+		MaxPendingAuth:          rt.MaxPendingAuth,
+		MaxAuthWorkers:          rt.MaxAuthWorkers,
+		MaxPendingAuthPerSource: rt.MaxPendingAuthPerSource,
+		Events:                  textEvents{},
 	}
 	return g, runSummary{Mode: modeServer, Listen: rt.Listen, Upstream: rt.Upstream, KnockMethod: rt.KnockMethod, Firewall: fw.Name(), FirewallInstalls: fw.Name() != "noop", PortHidden: fw.Name() != "noop", AllowSeconds: rt.Firewall.WithDefaults().AllowSeconds, IPv6: ipv6Summary(rt.Firewall), Clients: len(rt.Secrets)}, nil
 }
@@ -178,4 +179,14 @@ func (textEvents) OnRelayOK(ev relay.RelayEvent) {
 }
 func (textEvents) OnRelayError(ev relay.RelayErrorEvent) {
 	_, _ = fmt.Fprintf(stderr, "relay error remote=%s client=%s stage=%s err=%v\n", ev.Remote, ev.ClientID, ev.Stage, ev.Err)
+}
+
+// authReplayTTL keeps auth nonces for at least the full +/- time window an auth
+// frame is accepted for. A shorter auth.nonce_cache_seconds would let a captured
+// frame be replayed after its cache entry expires.
+func authReplayTTL(configured, window time.Duration) time.Duration {
+	if min := 2*window + time.Second; configured < min {
+		return min
+	}
+	return configured
 }

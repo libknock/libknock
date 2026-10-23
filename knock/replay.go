@@ -13,7 +13,13 @@ func replayCache(opts ListenOptions) auth.ReplayCache {
 	if opts.ReplayCache != nil {
 		return opts.ReplayCache
 	}
-	return auth.NewMemoryReplayCache(5 * time.Minute)
+	// Remember nonces for at least the full +/- TimeWindow acceptance span so
+	// a captured frame cannot be replayed after its entry expires.
+	ttl := 5 * time.Minute
+	if window := opts.TimeWindow; window > 0 && 2*window+time.Second > ttl {
+		ttl = 2*window + time.Second
+	}
+	return auth.NewMemoryReplayCache(ttl)
 }
 
 const defaultSYNReplayCacheMaxEntries = 65536
@@ -48,11 +54,13 @@ func (c *synReplayCache) CheckAndMark(clientID string, nonce []byte) error {
 		c.entries.Sweep(now)
 		c.nextSweep = now.Add(c.sweepEvery)
 	}
-	if c.entries.ActiveLen(now) >= c.maxEntries {
+	// Len is an O(1) upper bound on active entries; only pay for an O(n) sweep
+	// when the cache looks full. After a sweep Len equals the active count.
+	if c.entries.Len() >= c.maxEntries {
 		c.entries.Sweep(now)
 		c.nextSweep = now.Add(c.sweepEvery)
 	}
-	if c.entries.ActiveLen(now) >= c.maxEntries {
+	if c.entries.Len() >= c.maxEntries {
 		if _, ok := c.entries.GetAt(key, now); ok {
 			return auth.ErrReplayDetected
 		}

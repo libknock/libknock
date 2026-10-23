@@ -13,6 +13,7 @@ import (
 
 	"golang.org/x/crypto/chacha20poly1305"
 
+	"github.com/libknock/libknock/internal/iplimit"
 	"github.com/libknock/libknock/protocol"
 )
 
@@ -80,11 +81,14 @@ func serverAuthNormalized(ctx context.Context, conn net.Conn, cfg ServerConfig) 
 		}
 		return fail(ctx, conn, cfg, nil, ErrRateLimited, 0)
 	}
-	if deadline, ok := ctx.Deadline(); ok {
-		_ = conn.SetDeadline(deadline)
-	} else {
-		_ = conn.SetDeadline(time.Now().Add(cfg.AuthTimeout))
+	// AuthTimeout is an upper bound on the auth handshake. A caller context
+	// with an earlier deadline shortens it, but a later (or absent) deadline
+	// must not extend it, otherwise slow peers can hold auth slots open.
+	authDeadline := time.Now().Add(cfg.AuthTimeout)
+	if deadline, ok := ctx.Deadline(); ok && deadline.Before(authDeadline) {
+		authDeadline = deadline
 	}
+	_ = conn.SetDeadline(authDeadline)
 	br := bufio.NewReader(conn)
 	result, err := authenticateConfiguredProtocol(br, conn, cfg)
 	if err != nil {
@@ -398,18 +402,18 @@ func delayOnFail(ctx context.Context, cfg ServerConfig) {
 	}
 }
 
+// policyKey keys rate limiting by source. IPv4 (and IPv4-mapped IPv6) uses
+// the bare address; IPv6 is aggregated to its /64 so a single site cannot
+// rotate through addresses to evade limits or exhaust limiter capacity.
 func policyKey(addr net.Addr) string {
 	if addr == nil {
 		return "unknown:nil"
 	}
-	if tcp, ok := addr.(*net.TCPAddr); ok {
-		if tcp.IP != nil {
-			return tcp.IP.String()
-		}
-		return "unknown:tcp"
+	if key, ok := iplimit.Key(addr); ok {
+		return key
 	}
-	if host, _, err := net.SplitHostPort(addr.String()); err == nil && host != "" {
-		return host
+	if tcp, ok := addr.(*net.TCPAddr); ok && tcp != nil {
+		return "unknown:tcp"
 	}
 	if addr.String() == "" {
 		return "unknown:" + addr.Network()

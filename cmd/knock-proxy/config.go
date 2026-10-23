@@ -135,6 +135,9 @@ type transportConfig struct {
 type limitsConfig struct {
 	MaxPendingAuth int `yaml:"max_pending_auth"`
 	MaxAuthWorkers int `yaml:"max_auth_workers"`
+	// MaxPendingAuthPerSource caps queued/in-progress auths per source IP
+	// (IPv6 grouped by /64). 0 disables the cap.
+	MaxPendingAuthPerSource int `yaml:"max_pending_auth_per_source"`
 }
 type timeoutsConfig struct {
 	ConnectSeconds         int `yaml:"connect_seconds"`
@@ -159,6 +162,7 @@ type serverRuntime struct {
 	RemoveAfterAuth                            bool
 	DisableSessionBinding                      bool
 	MaxPendingAuth, MaxAuthWorkers             int
+	MaxPendingAuthPerSource                    int
 	Firewall                                   firewall.Config
 }
 
@@ -353,7 +357,7 @@ func (c fileConfig) serverRuntime() (serverRuntime, error) {
 		return serverRuntime{}, errors.New("remove_after_auth=true conflicts with max_connections_per_knock > 1")
 	}
 	disableSessionBinding := c.Knock.RequireSessionBinding != nil && !*c.Knock.RequireSessionBinding
-	return serverRuntime{Listen: c.Server.TCPListen, Upstream: c.Server.Upstream, Port: port, KnockMethod: method, KnockListen: udpListen, KnockPort: udpPort, Secrets: secrets, KnockClients: clients, Sequence: seq, KnockTimeWindow: knockWindow, KnockMaxFrameSize: maxFrameSize, NonceTTL: nonceTTL, AllowTTL: seconds(defaultInt(c.Firewall.AllowSeconds, 15)), AuthTimeWindow: seconds(defaultInt(c.Auth.TimeWindowSeconds, 30)), NonceCacheTTL: seconds(defaultInt(c.Auth.NonceCacheSeconds, 300)), AuthTimeout: seconds(defaultInt(c.Timeouts.AuthSeconds, 5)), UpstreamConnectTimeout: seconds(defaultInt(c.Timeouts.UpstreamConnectSeconds, defaultInt(c.Timeouts.ConnectSeconds, 5))), IdleTimeout: seconds(defaultInt(c.Timeouts.IdleSeconds, 300)), RemoveAfterAuth: removeAfterAuth, DisableSessionBinding: disableSessionBinding, MaxConnectionsPerKnock: maxConnectionsPerKnock, MaxPendingAuth: defaultInt(c.Limits.MaxPendingAuth, 128), MaxAuthWorkers: defaultInt(c.Limits.MaxAuthWorkers, 32), Firewall: fw}, nil
+	return serverRuntime{Listen: c.Server.TCPListen, Upstream: c.Server.Upstream, Port: port, KnockMethod: method, KnockListen: udpListen, KnockPort: udpPort, Secrets: secrets, KnockClients: clients, Sequence: seq, KnockTimeWindow: knockWindow, KnockMaxFrameSize: maxFrameSize, NonceTTL: nonceTTL, AllowTTL: seconds(defaultInt(c.Firewall.AllowSeconds, 15)), AuthTimeWindow: seconds(defaultInt(c.Auth.TimeWindowSeconds, 30)), NonceCacheTTL: seconds(defaultInt(c.Auth.NonceCacheSeconds, 300)), AuthTimeout: seconds(defaultInt(c.Timeouts.AuthSeconds, 5)), UpstreamConnectTimeout: seconds(defaultInt(c.Timeouts.UpstreamConnectSeconds, defaultInt(c.Timeouts.ConnectSeconds, 5))), IdleTimeout: seconds(defaultInt(c.Timeouts.IdleSeconds, 300)), RemoveAfterAuth: removeAfterAuth, DisableSessionBinding: disableSessionBinding, MaxConnectionsPerKnock: maxConnectionsPerKnock, MaxPendingAuth: defaultInt(c.Limits.MaxPendingAuth, 128), MaxAuthWorkers: defaultInt(c.Limits.MaxAuthWorkers, 32), MaxPendingAuthPerSource: c.Limits.MaxPendingAuthPerSource, Firewall: fw}, nil
 }
 
 func (c fileConfig) clientRuntime() (clientRuntime, error) {
@@ -646,6 +650,7 @@ func validateNonNegativeConfig(c fileConfig) error {
 		"firewall.allow_seconds":             c.Firewall.AllowSeconds,
 		"limits.max_pending_auth":            c.Limits.MaxPendingAuth,
 		"limits.max_auth_workers":            c.Limits.MaxAuthWorkers,
+		"limits.max_pending_auth_per_source": c.Limits.MaxPendingAuthPerSource,
 		"timeouts.connect_seconds":           c.Timeouts.ConnectSeconds,
 		"timeouts.upstream_connect_seconds":  c.Timeouts.UpstreamConnectSeconds,
 		"timeouts.auth_seconds":              c.Timeouts.AuthSeconds,

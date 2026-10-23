@@ -44,6 +44,18 @@ func UDPListenStringForKnockPort(addr string, knockPort int) string {
 	return net.JoinHostPort(host, strconv.Itoa(knockPort))
 }
 
+// AddrFromIP converts a knock source IP into the canonical form used by
+// session stores and firewall backends. IPv4-mapped IPv6 addresses (as
+// returned by dual-stack sockets for IPv4 peers) are unmapped so they match
+// the address seen on the TCP side via AddrFromNet.
+func AddrFromIP(ip net.IP) (netip.Addr, bool) {
+	a, ok := netip.AddrFromSlice(ip)
+	if !ok {
+		return netip.Addr{}, false
+	}
+	return a.Unmap(), true
+}
+
 func AddrFromNet(addr net.Addr) (netip.Addr, bool) {
 	if tcp, ok := addr.(*net.TCPAddr); ok {
 		a, ok := netip.AddrFromSlice(tcp.IP)
@@ -60,5 +72,8 @@ func AddrFromNet(addr net.Addr) (netip.Addr, bool) {
 		return netip.Addr{}, false
 	}
 	a, err := netip.ParseAddr(host)
-	return a, err == nil
+	if err != nil {
+		return netip.Addr{}, false
+	}
+	return a.Unmap(), true
 }

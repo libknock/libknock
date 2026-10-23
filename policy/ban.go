@@ -91,6 +91,9 @@ func (b *BanList) IsBannedAt(key string, now time.Time) bool {
 	// A caller of the legacy Ban/BanUntil API cannot receive ErrBanListFull.
 	// While every slot contains an active ban, reject unknown keys instead of
 	// silently allowing an attempted ban that did not fit.
+	if b.entries.Len() < b.entries.Cap() {
+		return false
+	}
 	return b.entries.ActiveLen(now) >= b.entries.Cap()
 }
 
@@ -119,22 +122,6 @@ func (b *BanList) Len() int {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.entries.Len()
-}
-
-func (b *BanList) sweepPeriodicallyLocked(now time.Time) {
-	if b.lastSweep.IsZero() {
-		b.lastSweep = now
-		return
-	}
-	interval := b.sweepInterval
-	if interval <= 0 {
-		interval = time.Minute
-	}
-	if now.Sub(b.lastSweep) < interval {
-		return
-	}
-	b.entries.Sweep(now)
-	b.lastSweep = now
 }
 
 func (b *BanList) updateSweepIntervalLocked(ttl time.Duration) {

@@ -9,7 +9,9 @@ import (
 
 	"github.com/libknock/libknock/auth"
 	"github.com/libknock/libknock/firewall"
+	"github.com/libknock/libknock/internal/acceptx"
 	"github.com/libknock/libknock/internal/gatewaycore"
+	"github.com/libknock/libknock/internal/iplimit"
 	"github.com/libknock/libknock/internal/timerset"
 )
 
@@ -96,15 +98,30 @@ func (g *Gateway) run(ctx context.Context) error {
 		_ = ln.Close()
 		active.CloseAll()
 	}()
-	pending := make(chan net.Conn, g.maxPendingAuth())
+	pending := make(chan pendingConn, g.maxPendingAuth())
+	perSource := iplimit.New(g.maxPendingAuthPerSource())
 	var dropped atomic.Int64
 	for range g.maxAuthWorkers() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for conn := range pending {
-				g.handleConn(runCtx, conn, authCfg, fw, store)
-				active.Remove(conn)
+			for item := range pending {
+				conn := item.conn
+				// Only the auth phase runs on the bounded worker pool. A
+				// successfully authenticated session is relayed on its own
+				// goroutine so long-lived sessions cannot starve new auths.
+				session := g.authenticateConn(runCtx, conn, authCfg, fw, store)
+				item.release()
+				if session == nil {
+					active.Remove(conn)
+					continue
+				}
+				wg.Add(1)
+				go func(conn net.Conn, session *authenticatedSession) {
+					defer wg.Done()
+					defer active.Remove(conn)
+					g.relaySession(runCtx, session)
+				}(conn, session)
 			}
 		}()
 	}
@@ -113,6 +130,7 @@ func (g *Gateway) run(ctx context.Context) error {
 		close(pending)
 		wg.Wait()
 	}()
+	var backoff acceptx.Backoff
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -122,12 +140,37 @@ func (g *Gateway) run(ctx context.Context) error {
 			if runCtx.Err() != nil {
 				return nil
 			}
+			// Back off and retry transient errors such as EMFILE instead of
+			// tearing down the whole gateway.
+			if acceptx.IsTemporary(err) {
+				if acceptx.Sleep(backoff.Next(), runCtx.Done()) {
+					continue
+				}
+				if e := childErr.load(); e != nil {
+					return e
+				}
+				return nil
+			}
 			return err
+		}
+		backoff.Reset()
+		release, ok := perSource.Acquire(conn.RemoteAddr())
+		if !ok {
+			_ = conn.Close()
+			g.emitRelayError(RelayErrorEvent{
+				Remote:       conn.RemoteAddr(),
+				Stage:        "source_limit",
+				Err:          errors.New("auth per-source pending limit reached"),
+				DroppedCount: dropped.Add(1),
+				Pending:      len(pending),
+			})
+			continue
 		}
 		active.Add(conn)
 		select {
-		case pending <- conn:
+		case pending <- pendingConn{conn: conn, release: release}:
 		case <-runCtx.Done():
+			release()
 			active.Remove(conn)
 			_ = conn.Close()
 			if e := childErr.load(); e != nil {
@@ -135,6 +178,7 @@ func (g *Gateway) run(ctx context.Context) error {
 			}
 			return nil
 		default:
+			release()
 			active.Remove(conn)
 			_ = conn.Close()
 			g.emitRelayError(RelayErrorEvent{
@@ -146,6 +190,11 @@ func (g *Gateway) run(ctx context.Context) error {
 			})
 		}
 	}
+}
+
+type pendingConn struct {
+	conn    net.Conn
+	release func()
 }
 
 type activeConnections struct {

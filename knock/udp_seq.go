@@ -240,10 +240,10 @@ func (t *sequenceTracker) pruneLocked(now time.Time) {
 }
 
 func (t *sequenceTracker) markCompletedLocked(key string, now time.Time) {
-	if t.completed.ActiveLen(now) >= t.opts.MaxTotalInflight {
+	if t.completed.Len() >= t.opts.MaxTotalInflight {
 		t.completed.Sweep(now)
 	}
-	if t.completed.ActiveLen(now) < t.opts.MaxTotalInflight {
+	if t.completed.Len() < t.opts.MaxTotalInflight {
 		t.completed.SetUntil(key, struct{}{}, now.Add(t.nonceTT))
 	}
 }

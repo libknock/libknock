@@ -30,7 +30,10 @@ type Gateway struct {
 	DisableSessionBinding  bool
 	MaxPendingAuth         int
 	MaxAuthWorkers         int
-	Events                 EventSink
+	// MaxPendingAuthPerSource caps queued/in-progress auths per source (IPv4
+	// address or IPv6 /64). Zero or negative disables (opt-in; see netx).
+	MaxPendingAuthPerSource int
+	Events                  EventSink
 }
 
 type EventSink = observability.GatewayEvents

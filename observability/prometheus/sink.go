@@ -246,6 +246,8 @@ func reasonLabel(err error) string {
 		return "hint_mode_none_too_broad"
 	case errors.Is(err, netx.ErrAuthBackpressure):
 		return "auth_backpressure"
+	case errors.Is(err, netx.ErrAuthSourceLimit):
+		return "auth_source_limit"
 	default:
 		return "error"
 	}

@@ -122,15 +122,20 @@ func (n *Nftables) Allow(ctx context.Context, addr netip.Addr, port int, ttl tim
 		if !ipv6Enabled(n.cfg, n.Name()) {
 			return errIPv6Unsupported(n.Name())
 		}
-		deleteInput := fmt.Sprintf("delete element %s %s %s { %s }\n", n.family, n.table, n.setV6, addr.String())
-		_ = ignoreMissingFirewallObject(runInputWithConfig(ctx, n.cfg, deleteInput, "nft", "-f", "-"))
-		input := fmt.Sprintf("add element %s %s %s { %s timeout %ds }\n", n.family, n.table, n.setV6, addr.String(), seconds)
-		return runInputWithConfig(ctx, n.cfg, input, "nft", "-f", "-")
+		return runInputWithConfig(ctx, n.cfg, nftRenewElementInput(n.family, n.table, n.setV6, addr.String(), seconds), "nft", "-f", "-")
 	}
-	deleteInput := fmt.Sprintf("delete element %s %s %s { %s }\n", n.family, n.table, n.setV4, v4.String())
-	_ = ignoreMissingFirewallObject(runInputWithConfig(ctx, n.cfg, deleteInput, "nft", "-f", "-"))
-	input := fmt.Sprintf("add element %s %s %s { %s timeout %ds }\n", n.family, n.table, n.setV4, v4.String(), seconds)
-	return runInputWithConfig(ctx, n.cfg, input, "nft", "-f", "-")
+	return runInputWithConfig(ctx, n.cfg, nftRenewElementInput(n.family, n.table, n.setV4, v4.String(), seconds), "nft", "-f", "-")
+}
+
+// nftRenewElementInput builds a single nft transaction that (re)sets an
+// element's timeout. nft applies a "-f" batch atomically, so the element is
+// never absent from the set during renewal. The leading "add" guarantees the
+// following "delete" finds the element, and "add" on an existing element is
+// not an error (unlike "create").
+func nftRenewElementInput(family, table, set, elem string, seconds int) string {
+	return fmt.Sprintf("add element %[1]s %[2]s %[3]s { %[4]s timeout %[5]ds }\n"+
+		"delete element %[1]s %[2]s %[3]s { %[4]s }\n"+
+		"add element %[1]s %[2]s %[3]s { %[4]s timeout %[5]ds }\n", family, table, set, elem, seconds)
 }
 
 func (n *Nftables) IsAllowed(ctx context.Context, addr netip.Addr, port int) (bool, error) {
