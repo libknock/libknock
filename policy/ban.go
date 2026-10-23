@@ -121,22 +121,6 @@ func (b *BanList) Len() int {
 	return b.entries.Len()
 }
 
-func (b *BanList) sweepPeriodicallyLocked(now time.Time) {
-	if b.lastSweep.IsZero() {
-		b.lastSweep = now
-		return
-	}
-	interval := b.sweepInterval
-	if interval <= 0 {
-		interval = time.Minute
-	}
-	if now.Sub(b.lastSweep) < interval {
-		return
-	}
-	b.entries.Sweep(now)
-	b.lastSweep = now
-}
-
 func (b *BanList) updateSweepIntervalLocked(ttl time.Duration) {
 	if ttl <= 0 {
 		return

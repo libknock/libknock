@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/netip"
 	"sync"
 	"time"
 
@@ -372,7 +371,7 @@ func (g *Gate) startKnock(ctx context.Context, ln net.Listener) error {
 
 func (g *Gate) knockSessionOnlyHandler(ln net.Listener) knock.Handler {
 	return func(ev knock.Event) {
-		remote, ok := netip.AddrFromSlice(ev.SourceIP)
+		remote, ok := gatewaycore.AddrFromIP(ev.SourceIP)
 		if !ok {
 			gatewaycore.EventEmitter{Sink: g.cfg.Events}.KnockFail(observability.KnockFailEvent{ClientID: ev.ClientID, Reason: "invalid_source_ip"})
 			return
@@ -394,7 +393,7 @@ func (g *Gate) knockSessionOnlyHandler(ln net.Listener) knock.Handler {
 
 func (g *Gate) knockHandler(ctx context.Context, ln net.Listener) knock.Handler {
 	return func(ev knock.Event) {
-		remote, ok := netip.AddrFromSlice(ev.SourceIP)
+		remote, ok := gatewaycore.AddrFromIP(ev.SourceIP)
 		if !ok {
 			gatewaycore.EventEmitter{Sink: g.cfg.Events}.KnockFail(observability.KnockFailEvent{ClientID: ev.ClientID, Reason: "invalid_source_ip"})
 			return
@@ -446,7 +445,7 @@ func (g *Gate) knockHandler(ctx context.Context, ln net.Listener) knock.Handler 
 }
 
 func (g *Gate) openKnockListener(ln net.Listener) (knock.KnockListener, error) {
-	opts := knock.ListenOptions{Port: gatewaycore.ListenerPort(ln.Addr()), KnockPort: g.cfg.KnockPort, Clients: g.cfg.KnockClients, TimeWindow: g.cfg.KnockTimeWindow, MaxFrameSize: g.cfg.KnockMaxFrameSize, RequireSessionID: g.cfg.Mode == KnockAuthOnly || g.cfg.Mode == KnockFirewallAuth, ReplayCache: auth.NewMemoryReplayCache(5 * time.Minute), Sequence: g.cfg.KnockSequence, NonceTTL: g.cfg.KnockNonceTTL}
+	opts := knock.ListenOptions{Port: gatewaycore.ListenerPort(ln.Addr()), KnockPort: g.cfg.KnockPort, Clients: g.cfg.KnockClients, TimeWindow: g.cfg.KnockTimeWindow, MaxFrameSize: g.cfg.KnockMaxFrameSize, RequireSessionID: g.cfg.Mode == KnockAuthOnly || g.cfg.Mode == KnockFirewallAuth, ReplayCache: auth.NewMemoryReplayCache(gatewaycore.KnockReplayTTL(g.cfg.KnockTimeWindow)), Sequence: g.cfg.KnockSequence, NonceTTL: g.cfg.KnockNonceTTL}
 	if g.cfg.Auth.ServerPort > 0 {
 		opts.Port = g.cfg.Auth.ServerPort
 	}

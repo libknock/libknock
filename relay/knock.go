@@ -3,7 +3,6 @@ package relay
 import (
 	"context"
 	"fmt"
-	"net/netip"
 	"time"
 
 	"github.com/libknock/libknock/auth"
@@ -21,7 +20,7 @@ func (g *Gateway) listenKnock(ctx context.Context, fw firewall.Backend, store *K
 		return err
 	}
 	handler := func(ev knock.Event) {
-		remote, ok := netip.AddrFromSlice(ev.SourceIP)
+		remote, ok := gatewaycore.AddrFromIP(ev.SourceIP)
 		if !ok {
 			g.emitKnockFail(KnockFailEvent{ClientID: ev.ClientID, Reason: "invalid_source_ip"})
 			return
@@ -53,7 +52,7 @@ func (g *Gateway) listenKnock(ctx context.Context, fw firewall.Backend, store *K
 			}
 		})
 	}
-	opts := knock.ListenOptions{Port: protectedPort, KnockPort: g.KnockPort, Clients: g.KnockClients, TimeWindow: g.KnockTimeWindow, MaxFrameSize: g.KnockMaxFrameSize, RequireSessionID: !g.DisableSessionBinding, ReplayCache: auth.NewMemoryReplayCache(5 * time.Minute), Sequence: g.KnockSequence, NonceTTL: g.KnockNonceTTL}
+	opts := knock.ListenOptions{Port: protectedPort, KnockPort: g.KnockPort, Clients: g.KnockClients, TimeWindow: g.KnockTimeWindow, MaxFrameSize: g.KnockMaxFrameSize, RequireSessionID: !g.DisableSessionBinding, ReplayCache: auth.NewMemoryReplayCache(gatewaycore.KnockReplayTTL(g.KnockTimeWindow)), Sequence: g.KnockSequence, NonceTTL: g.KnockNonceTTL}
 	switch knock.NormalizeMethod(g.KnockMethod) {
 	case knock.TCPSYNMethod:
 		return knock.Listen(ctx, opts, handler)

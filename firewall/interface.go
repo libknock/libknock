@@ -349,9 +349,26 @@ func ipv6Enabled(cfg Config, backend string) bool {
 
 func validateIptablesConfig(cfg IptablesConfig) error {
 	if cfg.Chain != "" {
-		return validateFirewallObjectName("iptables chain", cfg.Chain)
+		if err := validateFirewallObjectName("iptables chain", cfg.Chain); err != nil {
+			return err
+		}
+		if isReservedIptablesChain(cfg.Chain) {
+			return fmt.Errorf("unsafe iptables chain %q: use a libknock-owned chain such as KNOCK_GATEWAY; built-in chains would be flushed and deleted during cleanup", cfg.Chain)
+		}
 	}
 	return nil
+}
+
+// isReservedIptablesChain reports built-in chains and targets. Init/Cleanup
+// run "-F <chain>" and "-X <chain>", so accepting one of these names would
+// flush host firewall rules such as the whole INPUT chain.
+func isReservedIptablesChain(chain string) bool {
+	switch strings.ToUpper(chain) {
+	case "INPUT", "OUTPUT", "FORWARD", "PREROUTING", "POSTROUTING",
+		"ACCEPT", "DROP", "REJECT", "RETURN", "QUEUE", "LOG":
+		return true
+	}
+	return false
 }
 
 func validateIPSetIptablesConfig(cfg Config) error {
@@ -392,10 +409,6 @@ func firewallCommandPath(cfg Config, name string) (string, bool) {
 		return "", false
 	}
 	return path, true
-}
-
-func run(ctx context.Context, name string, args ...string) error {
-	return runWithConfig(ctx, Config{}, name, args...)
 }
 
 func runWithConfig(ctx context.Context, cfg Config, name string, args ...string) error {

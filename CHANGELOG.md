@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Normalized IPv4-mapped IPv6 knock source addresses in gate and relay so IPv4 clients knocking a dual-stack (`[::]` / `:port`) UDP listener match their TCP session and get valid iptables/ipset firewall rules.
+- Relay gateway now runs only authentication on the bounded `MaxAuthWorkers` pool; authenticated sessions are relayed on their own goroutines so long-lived sessions no longer starve new connections.
+- Rejected built-in iptables chains (`INPUT`, `FORWARD`, `OUTPUT`, ...) as the libknock-managed chain; `Init`/`Cleanup` previously would flush and delete them. `Iptables.WithConfig` now validates the chain like the other backends.
+- Knock replay caches in gate, relay, and knock listeners now keep nonces for at least `2*KnockTimeWindow`; the compatibility cmd raises `auth.nonce_cache_seconds` to cover `2*auth.time_window_seconds`.
+- `ServerAuth` / `Server.Auth` no longer let a later caller context deadline extend `AuthTimeout`.
+- Authenticated listeners and the relay gateway retry transient `Accept` errors (for example `EMFILE`) with backoff instead of shutting down.
+- Removed dead code reported by staticcheck.
 - Aligned nested Prometheus, gRPC example, and gRPC integration modules with the current `v0.1.0-rc3.3` root release.
 - Stopped UDP listener context watchers when serving exits for a non-context error.
 - Made bounded ban lists preserve active bans and fail closed at capacity; `BanE` and `BanUntilE` expose `ErrBanListFull` for callers that need an explicit result.

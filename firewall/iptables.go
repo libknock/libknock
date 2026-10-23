@@ -29,10 +29,16 @@ func (i *Iptables) WithConfig(cfg Config) (Backend, error) {
 	if err := validateFirewallPort(cfg.Port, i.Name()); err != nil {
 		return nil, err
 	}
+	if err := validateIptablesConfig(cfg.Iptables); err != nil {
+		return nil, err
+	}
 	return NewIptables(cfg), nil
 }
 
 func (i *Iptables) Init(ctx context.Context) error {
+	if err := validateIptablesConfig(IptablesConfig{Chain: i.chain}); err != nil {
+		return err
+	}
 	port := strconv.Itoa(i.cfg.Port)
 	udpPort := strconv.Itoa(udpKnockPort(i.cfg))
 	if err := i.cleanupCommand(ctx, "iptables", port, udpPort); err != nil {
@@ -113,6 +119,9 @@ func (i *Iptables) Revoke(ctx context.Context, addr netip.Addr, port int) error 
 }
 
 func (i *Iptables) Cleanup(ctx context.Context) error {
+	if err := validateIptablesConfig(IptablesConfig{Chain: i.chain}); err != nil {
+		return err
+	}
 	port := strconv.Itoa(i.cfg.Port)
 	udpPort := strconv.Itoa(udpKnockPort(i.cfg))
 	err := i.cleanupCommand(ctx, "iptables", port, udpPort)

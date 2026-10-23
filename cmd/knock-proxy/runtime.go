@@ -40,7 +40,7 @@ func buildServer(cfg fileConfig) (relay.Gateway, runSummary, error) {
 	g := relay.Gateway{
 		Listen:                 rt.Listen,
 		Upstream:               rt.Upstream,
-		Auth:                   auth.ServerConfig{ServerPort: rt.Port, Secrets: auth.NewStaticSecretResolver(rt.Secrets), ReplayCache: auth.NewMemoryReplayCache(rt.NonceCacheTTL), AuthTimeout: rt.AuthTimeout, TimeWindow: rt.AuthTimeWindow},
+		Auth:                   auth.ServerConfig{ServerPort: rt.Port, Secrets: auth.NewStaticSecretResolver(rt.Secrets), ReplayCache: auth.NewMemoryReplayCache(authReplayTTL(rt.NonceCacheTTL, rt.AuthTimeWindow)), AuthTimeout: rt.AuthTimeout, TimeWindow: rt.AuthTimeWindow},
 		Firewall:               fw,
 		KnockMethod:            rt.KnockMethod,
 		KnockListen:            rt.KnockListen,
@@ -178,4 +178,14 @@ func (textEvents) OnRelayOK(ev relay.RelayEvent) {
 }
 func (textEvents) OnRelayError(ev relay.RelayErrorEvent) {
 	_, _ = fmt.Fprintf(stderr, "relay error remote=%s client=%s stage=%s err=%v\n", ev.Remote, ev.ClientID, ev.Stage, ev.Err)
+}
+
+// authReplayTTL keeps auth nonces for at least the full +/- time window an auth
+// frame is accepted for. A shorter auth.nonce_cache_seconds would let a captured
+// frame be replayed after its cache entry expires.
+func authReplayTTL(configured, window time.Duration) time.Duration {
+	if min := 2*window + time.Second; configured < min {
+		return min
+	}
+	return configured
 }

@@ -46,6 +46,9 @@ func (i *IPSetIptables) WithConfig(cfg Config) (Backend, error) {
 }
 
 func (i *IPSetIptables) Init(ctx context.Context) error {
+	if err := validateIptablesConfig(IptablesConfig{Chain: i.chain}); err != nil {
+		return err
+	}
 	port := strconv.Itoa(i.cfg.Port)
 	udpPort := strconv.Itoa(udpKnockPort(i.cfg))
 	if err := runWithConfig(ctx, i.cfg, "ipset", "create", i.set, "hash:ip", "timeout", strconv.Itoa(i.cfg.AllowSeconds), "-exist"); err != nil {
@@ -130,6 +133,9 @@ func (i *IPSetIptables) Revoke(ctx context.Context, addr netip.Addr, port int) e
 }
 
 func (i *IPSetIptables) Cleanup(ctx context.Context) error {
+	if err := validateIptablesConfig(IptablesConfig{Chain: i.chain}); err != nil {
+		return err
+	}
 	port := strconv.Itoa(i.cfg.Port)
 	udpPort := strconv.Itoa(udpKnockPort(i.cfg))
 	err := i.cleanupCommand(ctx, "iptables", port, udpPort)

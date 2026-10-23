@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/libknock/libknock/auth"
+	"github.com/libknock/libknock/internal/acceptx"
 )
 
 const (
@@ -162,13 +163,23 @@ func (l *AuthenticatedListener) start() {
 func (l *AuthenticatedListener) acceptLoop() {
 	defer l.wg.Done()
 	defer close(l.pending)
+	var backoff acceptx.Backoff
 	for {
 		conn, err := l.Listener.Accept()
 		if err != nil {
+			// Retry transient errors such as EMFILE with backoff instead of
+			// permanently shutting the authenticated listener down.
+			if acceptx.IsTemporary(err) {
+				if acceptx.Sleep(backoff.Next(), l.done) {
+					continue
+				}
+				return
+			}
 			l.setErr(err)
 			l.closeDone()
 			return
 		}
+		backoff.Reset()
 		select {
 		case l.pending <- conn:
 		case <-l.done:

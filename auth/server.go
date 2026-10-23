@@ -80,11 +80,14 @@ func serverAuthNormalized(ctx context.Context, conn net.Conn, cfg ServerConfig) 
 		}
 		return fail(ctx, conn, cfg, nil, ErrRateLimited, 0)
 	}
-	if deadline, ok := ctx.Deadline(); ok {
-		_ = conn.SetDeadline(deadline)
-	} else {
-		_ = conn.SetDeadline(time.Now().Add(cfg.AuthTimeout))
+	// AuthTimeout is an upper bound on the auth handshake. A caller context
+	// with an earlier deadline shortens it, but a later (or absent) deadline
+	// must not extend it, otherwise slow peers can hold auth slots open.
+	authDeadline := time.Now().Add(cfg.AuthTimeout)
+	if deadline, ok := ctx.Deadline(); ok && deadline.Before(authDeadline) {
+		authDeadline = deadline
 	}
+	_ = conn.SetDeadline(authDeadline)
 	br := bufio.NewReader(conn)
 	result, err := authenticateConfiguredProtocol(br, conn, cfg)
 	if err != nil {

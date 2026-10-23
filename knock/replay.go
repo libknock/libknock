@@ -13,7 +13,13 @@ func replayCache(opts ListenOptions) auth.ReplayCache {
 	if opts.ReplayCache != nil {
 		return opts.ReplayCache
 	}
-	return auth.NewMemoryReplayCache(5 * time.Minute)
+	// Remember nonces for at least the full +/- TimeWindow acceptance span so
+	// a captured frame cannot be replayed after its entry expires.
+	ttl := 5 * time.Minute
+	if window := opts.TimeWindow; window > 0 && 2*window+time.Second > ttl {
+		ttl = 2*window + time.Second
+	}
+	return auth.NewMemoryReplayCache(ttl)
 }
 
 const defaultSYNReplayCacheMaxEntries = 65536
