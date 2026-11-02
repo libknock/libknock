@@ -51,3 +51,9 @@ clients can share one NAT address; set it below `max_auth_workers` (for example
 half) when slow or idle connections from a single source could otherwise
 occupy the whole auth worker pool. Policy rate-limit keys use the same
 grouping, so IPv6 clients are rate-limited per `/64`.
+
+## Multipath TCP
+
+Gateway listeners disable MPTCP by default (see `security.md`). If you set
+`server.mptcp: true`, use a firewall mode: its per-source accept rule and
+port drop rule also drop `MP_JOIN` subflows from addresses that did not knock.

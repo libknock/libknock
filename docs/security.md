@@ -15,6 +15,24 @@
 - Event sinks must not emit shared secrets, sealed payloads, complete frames, raw auth material, or unbounded error strings.
 - Prometheus labels normalize method and reason values to bounded sets; unknown method values become `unknown` and unclassified errors become `error`.
 
+## Multipath TCP (MPTCP)
+
+Since Go 1.24, `net.Listen` and `net.ListenConfig` accept MPTCP by default on
+Linux (`GODEBUG=multipathtcp=2`). An MPTCP connection can add subflows from
+other source addresses with `MP_JOIN`; those subflows never pass through
+`Accept`, so they are not checked against the authenticated source, knock
+session binding, `auth.Policy`, bans, or per-source limits. The `MP_JOIN`
+keys travel in cleartext TCP options, so an on-path observer can join an
+already-authenticated connection from its own address.
+
+- Listeners that libknock creates (`gate.Listen`, `relay.Gateway`, the
+  compatibility cmd) disable MPTCP. Opt in with `gate.Config.EnableMPTCP`,
+  `relay.Config.EnableMPTCP`, or `server.mptcp: true`, and only together with
+  a firewall mode whose drop rule blocks joins from unadmitted sources.
+- `netx.WrapListener` and `gate.Wrap` use the caller's listener. Create it with
+  `ListenConfig.SetMultipathTCP(false)`, or run the process with
+  `GODEBUG=multipathtcp=0`.
+
 ## State windows
 
 - `AuthTimeout` bounds the time spent reading authentication material.

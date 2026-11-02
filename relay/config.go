@@ -35,7 +35,11 @@ type Config struct {
 	// MaxPendingAuthPerSource caps queued/in-progress auths per source (IPv4
 	// address or IPv6 /64). Zero or negative disables (opt-in; see netx).
 	MaxPendingAuthPerSource int
-	Events                  EventSink
+	// EnableMPTCP lets the gateway listener accept Multipath TCP. Off by
+	// default because subflows joined from other addresses bypass source
+	// binding, policy and per-source limits; enable only with a firewall mode.
+	EnableMPTCP bool
+	Events      EventSink
 }
 
 func (c Config) WithDefaults() Config {
@@ -67,6 +71,6 @@ func NewGateway(cfg Config) *Gateway {
 		UpstreamConnectTimeout: cfg.UpstreamConnectTimeout, IdleTimeout: cfg.IdleTimeout,
 		RemoveAfterAuth: cfg.RemoveAfterAuth, MaxConnectionsPerKnock: cfg.MaxConnectionsPerKnock,
 		DisableSessionBinding: cfg.DisableSessionBinding, MaxPendingAuth: cfg.MaxPendingAuth,
-		MaxAuthWorkers: cfg.MaxAuthWorkers, MaxPendingAuthPerSource: cfg.MaxPendingAuthPerSource, Events: cfg.Events,
+		MaxAuthWorkers: cfg.MaxAuthWorkers, MaxPendingAuthPerSource: cfg.MaxPendingAuthPerSource, EnableMPTCP: cfg.EnableMPTCP, Events: cfg.Events,
 	}
 }

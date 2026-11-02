@@ -10,6 +10,7 @@ import (
 	"github.com/libknock/libknock"
 	"github.com/libknock/libknock/auth"
 	"github.com/libknock/libknock/firewall"
+	"github.com/libknock/libknock/internal/listenx"
 	"github.com/libknock/libknock/knock"
 	"github.com/libknock/libknock/relay"
 )
@@ -59,6 +60,7 @@ func buildServer(cfg fileConfig) (relay.Gateway, runSummary, error) {
 		MaxPendingAuth:          rt.MaxPendingAuth,
 		MaxAuthWorkers:          rt.MaxAuthWorkers,
 		MaxPendingAuthPerSource: rt.MaxPendingAuthPerSource,
+		EnableMPTCP:             rt.MPTCP,
 		Events:                  textEvents{},
 	}
 	return g, runSummary{Mode: modeServer, Listen: rt.Listen, Upstream: rt.Upstream, KnockMethod: rt.KnockMethod, Firewall: fw.Name(), FirewallInstalls: fw.Name() != "noop", PortHidden: fw.Name() != "noop", AllowSeconds: rt.Firewall.WithDefaults().AllowSeconds, IPv6: ipv6Summary(rt.Firewall), Clients: len(rt.Secrets)}, nil
@@ -88,7 +90,7 @@ func buildClient(cfg fileConfig) (clientRuntime, libknock.Dialer, runSummary, er
 }
 
 func runClient(ctx context.Context, rt clientRuntime, dialer libknock.Dialer) error {
-	ln, err := net.Listen("tcp", rt.Listen)
+	ln, err := listenx.ListenTCP(ctx, rt.Listen, false)
 	if err != nil {
 		return err
 	}

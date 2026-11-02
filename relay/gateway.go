@@ -12,6 +12,7 @@ import (
 	"github.com/libknock/libknock/internal/acceptx"
 	"github.com/libknock/libknock/internal/gatewaycore"
 	"github.com/libknock/libknock/internal/iplimit"
+	"github.com/libknock/libknock/internal/listenx"
 	"github.com/libknock/libknock/internal/timerset"
 )
 
@@ -54,7 +55,7 @@ func (g *Gateway) run(ctx context.Context) error {
 	if authCfg.ReplayCache == nil {
 		authCfg.ReplayCache = auth.NewMemoryReplayCache(authCfg.TimeWindow * 2)
 	}
-	ln, err := net.Listen("tcp", g.Listen)
+	ln, err := listenx.ListenTCP(ctx, g.Listen, g.EnableMPTCP)
 	if err != nil {
 		return err
 	}

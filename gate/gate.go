@@ -11,6 +11,7 @@ import (
 	"github.com/libknock/libknock/auth"
 	"github.com/libknock/libknock/firewall"
 	"github.com/libknock/libknock/internal/gatewaycore"
+	"github.com/libknock/libknock/internal/listenx"
 	"github.com/libknock/libknock/internal/timerset"
 	"github.com/libknock/libknock/knock"
 	"github.com/libknock/libknock/netx"
@@ -45,6 +46,12 @@ type Config struct {
 	AllowTTL               time.Duration
 	MaxConnectionsPerKnock int
 	Events                 observability.GatewayEvents
+	// EnableMPTCP lets Listen accept Multipath TCP. It is off by default:
+	// MPTCP subflows joined from other addresses bypass the source-address
+	// binding of auth, knock sessions, policy and per-source limits. Only
+	// enable it with a firewall mode that drops unadmitted sources. Wrap and
+	// netx.WrapListener use the caller's listener; see docs/security.md.
+	EnableMPTCP bool
 }
 
 type Gate struct {
@@ -158,7 +165,7 @@ func (g *Gate) Listen(ctx context.Context) (net.Listener, error) {
 	if g.cfg.Listen == "" {
 		return nil, errors.New("gate listen address is required")
 	}
-	ln, err := net.Listen("tcp", g.cfg.Listen)
+	ln, err := listenx.ListenTCP(ctx, g.cfg.Listen, g.cfg.EnableMPTCP)
 	if err != nil {
 		return nil, err
 	}
