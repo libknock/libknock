@@ -50,6 +50,9 @@ type clientConfig struct {
 type serverConfig struct {
 	TCPListen string `yaml:"tcp_listen"`
 	Upstream  string `yaml:"upstream"`
+	// MPTCP accepts Multipath TCP on tcp_listen. Default false: joined
+	// subflows from other addresses bypass source binding.
+	MPTCP bool `yaml:"mptcp"`
 }
 type accessConfig struct {
 	Mode                    string `yaml:"mode"`
@@ -163,6 +166,7 @@ type serverRuntime struct {
 	DisableSessionBinding                      bool
 	MaxPendingAuth, MaxAuthWorkers             int
 	MaxPendingAuthPerSource                    int
+	MPTCP                                      bool
 	Firewall                                   firewall.Config
 }
 
@@ -357,7 +361,7 @@ func (c fileConfig) serverRuntime() (serverRuntime, error) {
 		return serverRuntime{}, errors.New("remove_after_auth=true conflicts with max_connections_per_knock > 1")
 	}
 	disableSessionBinding := c.Knock.RequireSessionBinding != nil && !*c.Knock.RequireSessionBinding
-	return serverRuntime{Listen: c.Server.TCPListen, Upstream: c.Server.Upstream, Port: port, KnockMethod: method, KnockListen: udpListen, KnockPort: udpPort, Secrets: secrets, KnockClients: clients, Sequence: seq, KnockTimeWindow: knockWindow, KnockMaxFrameSize: maxFrameSize, NonceTTL: nonceTTL, AllowTTL: seconds(defaultInt(c.Firewall.AllowSeconds, 15)), AuthTimeWindow: seconds(defaultInt(c.Auth.TimeWindowSeconds, 30)), NonceCacheTTL: seconds(defaultInt(c.Auth.NonceCacheSeconds, 300)), AuthTimeout: seconds(defaultInt(c.Timeouts.AuthSeconds, 5)), UpstreamConnectTimeout: seconds(defaultInt(c.Timeouts.UpstreamConnectSeconds, defaultInt(c.Timeouts.ConnectSeconds, 5))), IdleTimeout: seconds(defaultInt(c.Timeouts.IdleSeconds, 300)), RemoveAfterAuth: removeAfterAuth, DisableSessionBinding: disableSessionBinding, MaxConnectionsPerKnock: maxConnectionsPerKnock, MaxPendingAuth: defaultInt(c.Limits.MaxPendingAuth, 128), MaxAuthWorkers: defaultInt(c.Limits.MaxAuthWorkers, 32), MaxPendingAuthPerSource: c.Limits.MaxPendingAuthPerSource, Firewall: fw}, nil
+	return serverRuntime{Listen: c.Server.TCPListen, Upstream: c.Server.Upstream, Port: port, KnockMethod: method, KnockListen: udpListen, KnockPort: udpPort, Secrets: secrets, KnockClients: clients, Sequence: seq, KnockTimeWindow: knockWindow, KnockMaxFrameSize: maxFrameSize, NonceTTL: nonceTTL, AllowTTL: seconds(defaultInt(c.Firewall.AllowSeconds, 15)), AuthTimeWindow: seconds(defaultInt(c.Auth.TimeWindowSeconds, 30)), NonceCacheTTL: seconds(defaultInt(c.Auth.NonceCacheSeconds, 300)), AuthTimeout: seconds(defaultInt(c.Timeouts.AuthSeconds, 5)), UpstreamConnectTimeout: seconds(defaultInt(c.Timeouts.UpstreamConnectSeconds, defaultInt(c.Timeouts.ConnectSeconds, 5))), IdleTimeout: seconds(defaultInt(c.Timeouts.IdleSeconds, 300)), RemoveAfterAuth: removeAfterAuth, DisableSessionBinding: disableSessionBinding, MaxConnectionsPerKnock: maxConnectionsPerKnock, MaxPendingAuth: defaultInt(c.Limits.MaxPendingAuth, 128), MaxAuthWorkers: defaultInt(c.Limits.MaxAuthWorkers, 32), MaxPendingAuthPerSource: c.Limits.MaxPendingAuthPerSource, MPTCP: c.Server.MPTCP, Firewall: fw}, nil
 }
 
 func (c fileConfig) clientRuntime() (clientRuntime, error) {

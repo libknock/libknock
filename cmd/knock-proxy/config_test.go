@@ -436,3 +436,35 @@ client:
 		t.Fatalf("client default method = %q, want %q", clientRT.KnockMethod, knock.UDPMethod)
 	}
 }
+
+func TestServerMPTCPDefaultsOffAndCanBeEnabled(t *testing.T) {
+	body := func(extra string) string {
+		return `mode: server
+server:
+  tcp_listen: "127.0.0.1:10443"
+  upstream: "127.0.0.1:22"
+` + extra + `knock:
+  method: udp
+auth:
+  clients:
+    - client_id: client-a
+      secret: ` + demoSecret + `
+firewall:
+  backend: noop
+`
+	}
+	g, _, err := buildServer(mustLoadConfig(t, body("")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g.EnableMPTCP {
+		t.Fatal("MPTCP must be disabled unless server.mptcp is set")
+	}
+	g, _, err = buildServer(mustLoadConfig(t, body("  mptcp: true\n")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !g.EnableMPTCP {
+		t.Fatal("server.mptcp: true was not passed to the relay gateway")
+	}
+}

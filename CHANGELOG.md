@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Gateway listeners (`gate.Listen`, `relay.Gateway`, compatibility cmd) now disable Multipath TCP, which Go 1.24 enables on Linux listeners by default; MPTCP subflows joined from other addresses bypassed source binding, policy, bans, and per-source limits. Opt in with `EnableMPTCP` (`gate.Config`, `relay.Config`/`relay.Gateway`) or `server.mptcp: true`. See `docs/security.md`.
 - Normalized IPv4-mapped IPv6 knock source addresses in gate and relay so IPv4 clients knocking a dual-stack (`[::]` / `:port`) UDP listener match their TCP session and get valid iptables/ipset firewall rules.
 - Relay gateway now runs only authentication on the bounded `MaxAuthWorkers` pool; authenticated sessions are relayed on their own goroutines so long-lived sessions no longer starve new connections.
 - Rejected built-in iptables chains (`INPUT`, `FORWARD`, `OUTPUT`, ...) as the libknock-managed chain; `Init`/`Cleanup` previously would flush and delete them. `Iptables.WithConfig` now validates the chain like the other backends.

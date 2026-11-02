@@ -33,7 +33,11 @@ type Gateway struct {
 	// MaxPendingAuthPerSource caps queued/in-progress auths per source (IPv4
 	// address or IPv6 /64). Zero or negative disables (opt-in; see netx).
 	MaxPendingAuthPerSource int
-	Events                  EventSink
+	// EnableMPTCP lets the gateway listener accept Multipath TCP. Off by
+	// default because subflows joined from other addresses bypass source
+	// binding, policy and per-source limits; enable only with a firewall mode.
+	EnableMPTCP bool
+	Events      EventSink
 }
 
 type EventSink = observability.GatewayEvents
